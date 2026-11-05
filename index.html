@@ -1,0 +1,223 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#2F5233">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="apple-touch-icon" href="icon-180.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="الإنتاج اليومي">
+<title>الإنتاج اليومي — شركة العلا</title>
+<style>
+:root{--g:#2F5233;--g2:#4a7c50;--bad:#d93025;--warn:#f9ab00;--bg:#f4f6f4}
+*{box-sizing:border-box}
+body{margin:0;font-family:"Segoe UI",Tahoma,"Noto Sans Arabic",Arial,sans-serif;background:var(--bg);color:#222;font-size:16px}
+header.bar{position:sticky;top:0;z-index:5;background:var(--g);color:#fff;padding:10px 14px;padding-top:max(10px,env(safe-area-inset-top));display:flex;align-items:center;justify-content:space-between;gap:8px}
+header.bar h1{font-size:19px;margin:0}
+.stat{font-size:13px;opacity:.95;text-align:left;line-height:1.35}
+main{padding:12px;max-width:900px;margin:auto;padding-bottom:110px}
+.card{background:#fff;border-radius:14px;padding:12px;margin-bottom:12px;box-shadow:0 1px 3px #0002}
+.card h2{font-size:16px;margin:0 0 10px;color:var(--g)}
+label{display:block;font-size:13px;color:#555;margin:8px 0 4px}
+input,select{width:100%;min-height:46px;font-size:16px;padding:8px 10px;border:1.5px solid #ccc;border-radius:10px;background:#fff;font-family:inherit}
+input:focus,select:focus{outline:none;border-color:var(--g2);box-shadow:0 0 0 3px #4a7c5033}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:0 10px}
+@media(max-width:420px){.grid2{grid-template-columns:1fr}}
+.other{margin-top:6px}
+.row{border:1.5px solid #e2e2e2;border-radius:12px;padding:10px;margin-bottom:10px;background:#fff}
+.row .top{display:flex;align-items:center;gap:8px;margin-bottom:6px}
+.num{min-width:32px;height:32px;border-radius:50%;background:var(--g);color:#fff;display:flex;align-items:center;justify-content:center;font-weight:bold;font-size:14px}
+.row .top input{flex:1;font-weight:bold;letter-spacing:1px;direction:ltr;text-align:center}
+.run{font-size:12px;color:#666;min-width:70px;text-align:left}
+.rgrid{display:grid;grid-template-columns:1fr 1fr;gap:6px}
+.msg{font-size:12.5px;color:var(--bad);margin-top:4px;min-height:0}
+.err{border-color:var(--bad)!important;background:#fdecea!important}
+.miss{border-color:var(--warn)!important;background:#fff8e1!important}
+.row.dup{border-color:var(--bad)}
+button{font-family:inherit;font-size:16px;min-height:48px;border:0;border-radius:12px;padding:10px 14px;cursor:pointer}
+.btn{background:var(--g);color:#fff}.btn2{background:#e8efe8;color:var(--g)}.btn3{background:#fdecea;color:var(--bad)}
+.actions{position:fixed;bottom:0;left:0;right:0;background:#fff;box-shadow:0 -2px 8px #0002;padding:8px;padding-bottom:max(8px,env(safe-area-inset-bottom));display:grid;grid-template-columns:repeat(4,1fr);gap:6px;z-index:5}
+.actions button{font-size:14px;padding:6px 4px}
+table.sum{width:100%;border-collapse:collapse;font-size:15px}
+table.sum th,table.sum td{border:1px solid #ddd;padding:8px;text-align:center}
+table.sum th{background:var(--g);color:#fff}
+.alerts div{padding:8px 10px;border-radius:10px;margin-bottom:6px;font-size:14px}
+.a-bad{background:#fdecea;color:var(--bad)}.a-ok{background:#e6f4ea;color:#137333}
+.hint{font-size:12.5px;color:#777}
+#print{display:none}
+#busy{position:fixed;inset:0;background:#0007;color:#fff;display:none;align-items:center;justify-content:center;font-size:18px;z-index:200}
+.rgrid3{display:grid;grid-template-columns:1fr 1fr;gap:6px}
+.sl{font-size:11.5px;color:#777;margin:4px 0 2px}
+</style>
+</head>
+<body>
+<header class="bar"><h1>الإنتاج اليومي</h1><div class="stat" id="stat"></div></header>
+<main>
+ <div class="card"><h2>بيانات اليوم</h2>
+  <div class="grid2">
+   <div><label>تاريخ الإنتاج</label><input id="date" type="date"></div>
+   <div><label>مهندس التشغيل</label><input id="eng"></div>
+   <div><label>الوردية</label><select id="shift"><option>صباحي</option><option>مسائي</option><option>ليلي</option></select></div>
+   <div><label>المُصدر</label><select id="exp"></select></div>
+  </div>
+ </div>
+ <div class="card alerts" id="alerts"></div>
+ <div class="card"><h2>الباليتات</h2>
+  <div class="hint">كل باليت في كارت. رقم الباليت من الاستيكر: حرف P وبعده أرقام (مثال P0001 أو P-9001، لحد 12 حرف)، بيتحول كابيتال تلقائي. وزن الكرتونة بيتكتب لوحده من نوع الكرتون وتقدر تغيره.</div><br>
+  <div id="rows"></div>
+  <button class="btn2" style="width:100%" id="addRow">+ إضافة باليت</button>
+ </div>
+ <div class="card"><h2>ملخص الأصناف</h2><div id="summary"></div></div>
+ <div class="hint" style="text-align:center">بيتحفظ تلقائياً على الموبايل ده. يشتغل من غير إنترنت.</div>
+</main>
+<div class="actions">
+ <button class="btn" id="bPrint">PDF / طباعة</button>
+ <button class="btn2" id="bXlsx">Excel</button>
+ <button class="btn2" id="bShare">مشاركة</button>
+ <button class="btn3" id="bNew">يوم جديد</button>
+</div>
+<div id="busy">جاري عمل التقرير PDF…</div>
+<script src="html2canvas.min.js"></script><script src="jspdf.umd.min.js"></script><script src="prod-report.js"></script>
+<script>
+if(/iPad|iPhone|iPod/.test(navigator.userAgent)||(navigator.platform==='MacIntel'&&navigator.maxTouchPoints>1)||(/Safari/.test(navigator.userAgent)&&!/Chrome|Chromium|CriOS|Android/.test(navigator.userAgent)))document.documentElement.classList.add('ios');
+
+const L={"variety": ["أبو سرة", "صيفي", "موركيت كيني", "موركيت إسباني", "ليمون"], "size": ["20", "28", "32", "36", "40", "42", "48", "56", "64", "72", "80", "88", "100", "113"], "carton": ["أوبن توب 7 ك", "مقفول صغير 7 ك", "مقفول 14 ك", "مقفول 15 ك"], "exporter": ["العلا", "الحسن", "صن فروت"], "grade": ["أولى", "وسط", "ثانية"], "loc": ["الصالة", "الثلاجة"], "pack": ["كرتون", "صندوق بلاستيك"], "brand": ["العلا", "الحسن", "كوكلو"]};
+const MAXDEF=10,KEY='alola_production_v1',F=['p','v','s','pk','c','b','g','loc','n','w','note'],REQ=['p','v','s','pk','c','b','g','loc','n'];
+const NAMES={p:'رقم الباليت',v:'الصنف',s:'المقاس',pk:'نوع التعبئة',c:'نوع الكرتون',b:'اسم الكرتون',g:'الدرجة',loc:'مكان التخزين',n:'عدد الكراتين',w:'وزن الكرتونة (كجم)',note:'ملاحظات'};
+const er=()=>Object.fromEntries(F.map(k=>[k,'']));
+let S=load();
+function blank(eng,exp){return {h:{date:new Date().toISOString().slice(0,10),eng:eng||'',exp:exp||'العلا'},rows:Array.from({length:MAXDEF},er)}}
+function load(){try{const x=JSON.parse(localStorage.getItem(KEY));if(x&&x.rows)return x}catch(e){}return blank()}
+function save(){try{localStorage.setItem(KEY,JSON.stringify(S))}catch(e){}}
+const $=id=>document.getElementById(id);
+const esc=s=>String(s??'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+function opts(list,val,ph){let h=`<option value="">${ph}</option>`+list.map(x=>`<option${x===val?' selected':''}>${esc(x)}</option>`).join('');if(val&&!list.includes(val))h+=`<option selected>${esc(val)}</option>`;return h}
+const VALID=/^(?=.*\d)P[A-Z0-9-]{1,11}$/;
+const wOf=c=>{const m=String(c).match(/(\d+(?:\.\d+)?)\s*ك/);return m?m[1]:''};
+const XK='alola_production_extra';let XL={};try{XL=JSON.parse(localStorage.getItem(XK))||{}}catch(e){}XL.carton=XL.carton||[];XL.exporter=XL.exporter||[];const saveXL=()=>{try{localStorage.setItem(XK,JSON.stringify(XL))}catch(e){}};
+const CT=()=>[...new Set(L.carton.concat(XL.carton))],EXL=()=>[...new Set(L.exporter.concat(XL.exporter))];
+function initExp(){const el=$('exp');if(!S.h.exp)S.h.exp='العلا';el.innerHTML=EXL().map(x=>`<option${x===S.h.exp?' selected':''}>${esc(x)}</option>`).join('')+(EXL().includes(S.h.exp)?'':`<option selected>${esc(S.h.exp)}</option>`)+'<option value="__new">+ مُصدر جديد…</option>';el.onchange=()=>{if(el.value==='__new'){const x=(prompt('اسم المُصدر الجديد:')||'').trim();if(x){if(!EXL().includes(x)){XL.exporter.push(x);saveXL()}S.h.exp=x}initExp();save();upd();return}S.h.exp=el.value;save();upd()}}
+function initHeader(){initExp();if(!S.h.shift)S.h.shift='صباحي';['date','eng','shift'].forEach(k=>{const el=$(k);el.value=S.h[k]||'';el.oninput=el.onchange=()=>{S.h[k]=el.value;upd()}})}
+function sel(i,k,list,r){return `<div><div class="sl">${NAMES[k]}</div><select data-i="${i}" data-k="${k}">${opts(list,r[k],'— اختار —')}</select></div>`}
+function renderRows(){
+ $('rows').innerHTML=S.rows.map((r,i)=>`<div class="row" id="r${i}"><div class="top"><span class="num">${i+1}</span>
+ <input data-i="${i}" data-k="p" value="${esc(r.p)}" placeholder="P0000 / P-9001" inputmode="text" autocapitalize="characters" autocomplete="off" maxlength="12">
+ <span class="run" id="run${i}"></span></div>
+ <div class="rgrid3">${sel(i,'v',L.variety,r)}${sel(i,'s',L.size,r)}${sel(i,'pk',L.pack,r)}${sel(i,'c',CT(),r).replace('</select>','<option value="__new">+ نوع جديد…</option></select>')}${sel(i,'b',L.brand,r)}${sel(i,'g',L.grade,r)}${sel(i,'loc',L.loc,r)}
+ <div><div class="sl">عدد الكراتين</div><input data-i="${i}" data-k="n" type="number" inputmode="numeric" min="1" step="1" value="${esc(r.n)}"></div>
+ <div><div class="sl">وزن الكرتونة (كجم)</div><input data-i="${i}" data-k="w" type="number" inputmode="decimal" min="0" step="0.1" value="${esc(r.w)}"></div></div>
+ <div class="sl">ملاحظات</div><input data-i="${i}" data-k="note" value="${esc(r.note)}">
+ <div class="msg" id="m${i}"></div></div>`).join('');
+}
+document.addEventListener('input',e=>{const t=e.target;if(t.dataset.i===undefined||t.value==='__new')return;let v=t.value;
+ if(t.dataset.k==='p'){const pos=t.selectionStart;v=v.toUpperCase().replace(/\s/g,'');t.value=v;try{t.setSelectionRange(pos,pos)}catch(_){}}
+ S.rows[t.dataset.i][t.dataset.k]=v;upd()});
+document.addEventListener('change',e=>{const t=e.target;if(t.dataset.i===undefined)return;if(t.value==='__new'){const x=(prompt('اسم نوع الكرتون الجديد (مثال: مقفول 10 ك):')||'').trim();if(x&&!CT().includes(x)){XL.carton.push(x);saveXL()}S.rows[t.dataset.i].c=x||S.rows[t.dataset.i].c;save();renderRows();upd();return}const r=S.rows[t.dataset.i];r[t.dataset.k]=t.value;
+ if(t.dataset.k==='c'){const w=wOf(t.value);if(w){r.w=w;const el=document.querySelector(`[data-i="${t.dataset.i}"][data-k="w"]`);if(el)el.value=w}}upd()});
+const filled=r=>F.some(k=>r[k]);
+function analyse(){
+ const cnt={};S.rows.forEach(r=>{if(r.p)cnt[r.p]=(cnt[r.p]||0)+1});
+ let run=0,pal=0,dups=0,bad=0,miss=0,kg=0;const sum={};const res=[];
+ S.rows.forEach(r=>{const o={};
+  if(r.p){pal++;if(!VALID.test(r.p)){o.bad=1;bad++}else if(cnt[r.p]>1){o.dup=1;dups++}}
+  if(filled(r)){o.miss=REQ.filter(k=>!r[k]);if(o.miss.length)miss++}
+  const n=parseInt(r.n)||0,w=parseFloat(r.w)||0;run+=n;o.kg=n*w;kg+=o.kg;
+  if(r.p&&r.v){const K=r.v+'\u0001'+(r.s||'')+'\u0001'+(r.c||'');sum[K]=sum[K]||{v:r.v,s:r.s||'',c:r.c||'',p:0,n:0,kg:0};sum[K].p++;sum[K].n+=n;sum[K].kg+=n*w}
+  res.push(o)});
+ return {res,run,pal,dups,bad,miss,kg:Math.round(kg*10)/10,sum};
+}
+function upd(){
+ save();const A=analyse();
+ A.res.forEach((o,i)=>{const row=$('r'+i);if(!row)return;
+  row.querySelectorAll('[data-k]').forEach(el=>{const k=el.dataset.k;el.classList.toggle('err',k==='p'&&!!(o.bad||o.dup));el.classList.toggle('miss',!!(o.miss&&o.miss.includes(k))&&!(k==='p'&&(o.bad||o.dup)))});
+  row.classList.toggle('dup',!!o.dup);
+  $('m'+i).textContent=o.bad?'رقم غير صحيح — لازم يبدأ بـ P وفيه أرقام (لحد 12 حرف)':o.dup?'رقم مكرر!':(o.miss&&o.miss.length?'بيانات ناقصة':'');
+  $('run'+i).textContent=o.kg?(Math.round(o.kg*10)/10+' كجم'):''});
+ $('stat').innerHTML=`${A.pal} باليت — ${A.run} كرتونة<br>${A.kg} كجم`;
+ const al=[];if(A.dups)al.push(`<div class="a-bad">⚠ يوجد ${A.dups} سطر برقم باليت مكرر</div>`);
+ if(A.bad)al.push(`<div class="a-bad">⚠ يوجد ${A.bad} رقم باليت غير صحيح</div>`);
+ if(A.miss)al.push(`<div class="a-bad">⚠ يوجد ${A.miss} سطر بيانات ناقصة</div>`);
+ if(!S.h.date)al.push(`<div class="a-bad">ناقص: تاريخ الإنتاج</div>`);
+ if(!al.length)al.push(`<div class="a-ok">✓ كله سليم</div>`);
+ $('alerts').innerHTML=`<b>عدد الباليتات: ${A.pal} — إجمالي الكراتين: ${A.run} — إجمالي الوزن: ${A.kg} كجم</b><br><br>`+al.join('');
+ $('summary').innerHTML=sumTable(A);
+}
+const r1=x=>Math.round(x*10)/10;
+function sumKeys(A){return Object.keys(A.sum).sort((a,b)=>A.sum[a].v.localeCompare(A.sum[b].v,'ar')||((parseFloat(A.sum[a].s)||0)-(parseFloat(A.sum[b].s)||0))||A.sum[a].s.localeCompare(A.sum[b].s)||A.sum[a].c.localeCompare(A.sum[b].c,'ar'))}
+function sumTable(A){const ks=sumKeys(A);if(!ks.length)return '<div class="hint">لسه مفيش بيانات</div>';
+ return `<table class="sum"><tr><th>الصنف</th><th>المقاس</th><th>نوع الكرتون</th><th>باليتات</th><th>كراتين</th><th>وزن كجم</th></tr>${ks.map(k=>`<tr><td>${esc(A.sum[k].v)}</td><td>${esc(A.sum[k].s)}</td><td>${esc(A.sum[k].c)}</td><td>${A.sum[k].p}</td><td>${A.sum[k].n}</td><td>${r1(A.sum[k].kg)}</td></tr>`).join('')}<tr><th colspan="3">الإجمالي</th><th>${ks.reduce((a,k)=>a+A.sum[k].p,0)}</th><th>${ks.reduce((a,k)=>a+A.sum[k].n,0)}</th><th>${r1(ks.reduce((a,k)=>a+A.sum[k].kg,0))}</th></tr></table>`}
+$('addRow').onclick=()=>{S.rows.push(er());renderRows();upd();const i=S.rows.length-1;$('r'+i).scrollIntoView({behavior:'smooth'});$('r'+i).querySelector('input').focus()};
+$('bNew').onclick=()=>{if(confirm('هتبدأ يوم جديد وهتمسح بيانات اليوم الحالي. اتأكد إنك بعت الملف الأول. متأكد؟')){S=blank(S.h.eng,S.h.exp);delete S.h.code;save();initHeader();renderRows();upd();scrollTo(0,0)}};
+function fname(ext){return 'تقرير تشغيل يوم '+(S.h.date||new Date().toISOString().slice(0,10))+'.'+ext}
+const used=()=>S.rows.map((r,i)=>({...r,i:i+1})).filter(filled);
+const COLS=['م','رقم الباليت','الصنف','المقاس','نوع التعبئة','نوع الكرتون','اسم الكرتون','الدرجة','مكان التخزين','عدد الكراتين','وزن الكرتونة (كجم)','ملاحظات'];
+/* ---------- PDF v9 ---------- */
+function repData(){if(!S.h.code){const d=new Date(),p=x=>String(x).padStart(2,'0');S.h.code='PR-'+(S.h.date||'').replace(/-/g,'')+'-'+p(d.getHours())+p(d.getMinutes())+'-'+Math.random().toString(36).slice(2,6).toUpperCase();save()}
+ const d=new Date();const A=analyse(),N=v=>v===''||v==null?'':(isNaN(Number(v))?v:Number(v));const aoa=[['الإنتاج اليومي — شركة العلا لفرز الحاصلات الزراعية'],[],['تاريخ الإنتاج',S.h.date],['مهندس التشغيل',S.h.eng],['المُصدر',S.h.exp||'العلا'],['الوردية',S.h.shift||''],['كود التقرير',S.h.code],['عدد الباليتات',A.pal],['إجمالي الكراتين',A.run],['إجمالي الوزن كجم',A.kg],[],COLS,...used().map(x=>[x.i,x.p,x.v,N(x.s),x.pk,x.c,x.b,x.g,x.loc,N(x.n),N(x.w),x.note])];return {aoa,code:S.h.code,date:S.h.date,shift:S.h.shift,eng:S.h.eng,exp:S.h.exp||'العلا',at:d.toTimeString().slice(0,5),rows:used().filter(r=>r.p||r.v||r.n)}}
+$('bPrint').onclick=async()=>{const d=repData();if(!d.rows.length)return alert('مفيش باليتات مسجلة');$('busy').style.display='flex';
+ try{const blob=await PR.pdf(d);const name='تقرير تشغيل يوم '+d.date+'.pdf';const f=new File([blob],name,{type:'application/pdf'});$('busy').style.display='none';
+  if(navigator.canShare&&navigator.canShare({files:[f]})){try{await navigator.share({files:[f],title:'تقرير تشغيل يوم '+d.date,text:'تقرير تشغيل يوم '+d.date+' — شركة العلا ('+d.code+')'});return}catch(e){if(e.name==='AbortError')return}}
+  download(blob,name)}catch(e){$('busy').style.display='none';alert('حصلت مشكلة: '+e.message)}};
+const crcT=(()=>{const t=new Uint32Array(256);for(let n=0;n<256;n++){let c=n;for(let k=0;k<8;k++)c=c&1?0xEDB88320^(c>>>1):c>>>1;t[n]=c}return t})();
+function crc(b){let c=~0;for(let i=0;i<b.length;i++)c=crcT[(c^b[i])&255]^(c>>>8);return ~c>>>0}
+function zip(files){const enc=new TextEncoder(),parts=[],cen=[];let off=0;
+ for(const [name,str] of files){const n=enc.encode(name),d=enc.encode(str),c=crc(d);
+  const h=new DataView(new ArrayBuffer(30));h.setUint32(0,0x04034b50,true);h.setUint16(4,20,true);h.setUint16(6,0x0800,true);h.setUint32(14,c,true);h.setUint32(18,d.length,true);h.setUint32(22,d.length,true);h.setUint16(26,n.length,true);
+  parts.push(new Uint8Array(h.buffer),n,d);
+  const ch=new DataView(new ArrayBuffer(46));ch.setUint32(0,0x02014b50,true);ch.setUint16(4,20,true);ch.setUint16(6,20,true);ch.setUint16(8,0x0800,true);ch.setUint32(16,c,true);ch.setUint32(20,d.length,true);ch.setUint32(24,d.length,true);ch.setUint16(28,n.length,true);ch.setUint32(42,off,true);
+  cen.push(new Uint8Array(ch.buffer),n);off+=30+n.length+d.length}
+ const cs=cen.reduce((a,b)=>a+b.length,0);const e=new DataView(new ArrayBuffer(22));e.setUint32(0,0x06054b50,true);e.setUint16(8,files.length,true);e.setUint16(10,files.length,true);e.setUint32(12,cs,true);e.setUint32(16,off,true);
+ return new Blob([...parts,...cen,new Uint8Array(e.buffer)],{type:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'})}
+const X=s=>String(s??'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+function download(blob,name){const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=name;document.body.appendChild(a);a.click();setTimeout(()=>{URL.revokeObjectURL(a.href);a.remove()},1500)}
+function colL(i){return String.fromCharCode(65+i)}
+function makeXlsx(){const A=analyse();const R=[];let r=1;
+ const cell=(c,v,s)=>typeof v==='number'?`<c r="${c}"${s?` s="${s}"`:''}><v>${v}</v></c>`:`<c r="${c}" t="inlineStr"${s?` s="${s}"`:''}><is><t>${X(v)}</t></is></c>`;
+ const row=(vals,s)=>{R.push(`<row r="${r}">${vals.map((v,i)=>v===''||v==null?'':cell(colL(i)+r,v,s)).join('')}</row>`);r++};
+ row(['الإنتاج اليومي — شركة العلا لفرز الحاصلات الزراعية'],1);r++;
+ [['تاريخ الإنتاج',S.h.date],['مهندس التشغيل',S.h.eng],['المُصدر',S.h.exp||'العلا'],['عدد الباليتات',A.pal],['إجمالي الكراتين',A.run],['إجمالي الوزن كجم',A.kg]].forEach(x=>row(x));
+ r++;row(COLS,2);
+ const N=v=>v===''?'':(isNaN(Number(v))?v:Number(v));
+ used().forEach(x=>row([x.i,x.p,x.v,N(x.s),x.pk,x.c,x.b,x.g,x.loc,N(x.n),N(x.w),x.note]));
+ r++;row(['ملخص الأصناف'],1);row(['الصنف','المقاس','نوع الكرتون','باليتات','كراتين','وزن كجم'],2);{const ks=sumKeys(A);ks.forEach(k=>row([A.sum[k].v,(isNaN(Number(A.sum[k].s))||A.sum[k].s===""?A.sum[k].s:Number(A.sum[k].s)),A.sum[k].c,A.sum[k].p,A.sum[k].n,r1(A.sum[k].kg)]));row(['الإجمالي','','',ks.reduce((a,k)=>a+A.sum[k].p,0),ks.reduce((a,k)=>a+A.sum[k].n,0),r1(ks.reduce((a,k)=>a+A.sum[k].kg,0))],2);}
+ const sheet=`<?xml version="1.0" encoding="UTF-8" standalone="yes"?><worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main"><sheetViews><sheetView rightToLeft="1" workbookViewId="0"/></sheetViews><cols><col min="1" max="1" width="18" customWidth="1"/><col min="2" max="11" width="14" customWidth="1"/></cols><sheetData>${R.join('')}</sheetData></worksheet>`;
+ return zip([['[Content_Types].xml','<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types"><Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/><Default Extension="xml" ContentType="application/xml"/><Override PartName="/xl/workbook.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet.main+xml"/><Override PartName="/xl/worksheets/sheet1.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.worksheet+xml"/><Override PartName="/xl/styles.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.styles+xml"/></Types>'],
+ ['_rels/.rels','<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="xl/workbook.xml"/></Relationships>'],
+ ['xl/workbook.xml','<?xml version="1.0" encoding="UTF-8" standalone="yes"?><workbook xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"><sheets><sheet name="Production" sheetId="1" r:id="rId1"/></sheets></workbook>'],
+ ['xl/_rels/workbook.xml.rels','<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/worksheet" Target="worksheets/sheet1.xml"/><Relationship Id="rId2" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/styles" Target="styles.xml"/></Relationships>'],
+ ['xl/styles.xml','<?xml version="1.0" encoding="UTF-8" standalone="yes"?><styleSheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main"><fonts count="3"><font><sz val="11"/><name val="Arial"/></font><font><b/><sz val="14"/><name val="Arial"/></font><font><b/><sz val="11"/><color rgb="FFFFFFFF"/><name val="Arial"/></font></fonts><fills count="3"><fill><patternFill patternType="none"/></fill><fill><patternFill patternType="gray125"/></fill><fill><patternFill patternType="solid"><fgColor rgb="FF2F5233"/></patternFill></fill></fills><borders count="1"><border><left/><right/><top/><bottom/><diagonal/></border></borders><cellStyleXfs count="1"><xf numFmtId="0" fontId="0" fillId="0" borderId="0"/></cellStyleXfs><cellXfs count="3"><xf numFmtId="0" fontId="0" fillId="0" borderId="0" xfId="0"/><xf numFmtId="0" fontId="1" fillId="0" borderId="0" xfId="0" applyFont="1"/><xf numFmtId="0" fontId="2" fillId="2" borderId="0" xfId="0" applyFont="1" applyFill="1"/></cellXfs><cellStyles count="1"><cellStyle name="Normal" xfId="0" builtinId="0"/></cellStyles></styleSheet>'],
+ ['xl/worksheets/sheet1.xml',sheet]])}
+$('bXlsx').onclick=()=>download(makeXlsx(),fname('xlsx'));
+function csv(){const A=analyse();const q=v=>'"'+String(v??'').replace(/"/g,'""')+'"';const o=[];
+ [['تاريخ الإنتاج',S.h.date],['مهندس التشغيل',S.h.eng],['المُصدر',S.h.exp||'العلا'],['عدد الباليتات',A.pal],['إجمالي الكراتين',A.run],['إجمالي الوزن كجم',A.kg],[]].forEach(x=>o.push(x.map(q).join(',')));
+ o.push(COLS.map(q).join(','));used().forEach(x=>o.push([x.i,x.p,x.v,x.s,x.pk,x.c,x.b,x.g,x.loc,x.n,x.w,x.note].map(q).join(',')));
+ return new Blob(['\ufeff'+o.join('\r\n')],{type:'text/csv;charset=utf-8'})}
+$('bShare').onclick=async()=>{
+ const f=new File([makeXlsx()],fname('xlsx'),{type:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'});
+ const A=analyse();const text=`الإنتاج اليومي ${S.h.date} — ${A.pal} باليت / ${A.run} كرتونة / ${A.kg} كجم`;
+ if(navigator.canShare&&navigator.canShare({files:[f]})){try{await navigator.share({files:[f],title:'Daily Production',text});return}catch(e){if(e.name==='AbortError')return}}
+ const c=new File([csv()],fname('csv'),{type:'text/csv'});
+ if(navigator.canShare&&navigator.canShare({files:[c]})){try{await navigator.share({files:[c],text});return}catch(e){if(e.name==='AbortError')return}}
+ download(csv(),fname('csv'));alert('المشاركة المباشرة مش مدعومة هنا — اتحفظ ملف CSV. للـ PDF استخدم زرار "PDF / طباعة".');
+};
+if(location.hash==='#demo'){S=blank();S.h.eng='م. أحمد';
+ [['P0001','ليمون','48','كرتون 14 ك','الحسن','أولى','ثلاجة 1','80'],['P0002','ليمون','56','كرتون 14 ك','الحسن','أولى','ثلاجة 1','80'],['P0002','أبو سرة','72','مقفول 7 ك','كوكلو','تانية','ثلاجة 2','150'],['p12','صيفي','','أوبن 7 ك','كوكلو','','','']].forEach((x,i)=>{S.rows[i]={p:x[0].toUpperCase(),v:x[1],s:x[2],c:x[3],b:x[4],g:x[5],loc:x[6],n:x[7],w:wOf(x[3]),note:''}})}
+initHeader();renderRows();upd();
+if('serviceWorker' in navigator&&(location.protocol==='https:'||location.hostname==='localhost'))navigator.serviceWorker.register('sw.js').catch(()=>{});
+</script>
+<script>
+// ===== No-data-loss autosave: every change -> localStorage + IndexedDB mirror; restored after sleep/kill/restart =====
+(function(){let db=null;const ind=document.createElement('div');ind.className='noprint';ind.style.cssText='position:fixed;bottom:6px;left:8px;font-size:11px;background:#1d4d2b;color:#dfffd6;padding:2px 8px;border-radius:8px;z-index:99;opacity:.9';document.body.appendChild(ind);
+ const put=v=>{if(!db)return;try{const t=db.transaction('kv','readwrite');t.objectStore('kv').put(v,'S');t.oncomplete=()=>{ind.textContent='✓ تم الحفظ تلقائياً '+new Date().toTimeString().slice(0,8)}}catch(e){}};
+ const _save=save;save=function(){S._ts=Date.now();_save();put(JSON.stringify(S));ind.textContent='✓ تم الحفظ تلقائياً '+new Date().toTimeString().slice(0,8)};
+ const hasData=x=>x&&x.rows&&x.rows.some(r=>r.p||r.v||r.n);
+ document.addEventListener('input',()=>setTimeout(save,0));document.addEventListener('change',()=>setTimeout(save,0));
+ document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='hidden')save()});window.addEventListener('pagehide',()=>save());
+ const op=indexedDB.open('alola-production-draft',1);op.onupgradeneeded=()=>op.result.createObjectStore('kv');
+ op.onsuccess=()=>{db=op.result;const r=db.transaction('kv').objectStore('kv').get('S');r.onsuccess=()=>{let ls=null;try{ls=JSON.parse(localStorage.getItem(KEY))}catch(e){}
+  const v=r.result?JSON.parse(r.result):null;const best=[S,ls,v].filter(x=>x&&x.rows&&hasData(x)).sort((a,b)=>(b._ts||0)-(a._ts||0))[0];if(best&&best!==S){S=best;try{localStorage.setItem(KEY,JSON.stringify(S))}catch(e){};initHeader();renderRows();upd()}if(hasData(S))put(JSON.stringify(S));
+  if(hasData(S)){const b=document.createElement('div');b.id='draftBanner';b.className='noprint';b.style.cssText='background:#fffbea;border:1px solid #f1d38a;border-radius:9px;padding:8px;margin:8px;font-size:13px';b.innerHTML='📝 <b>مسودة غير مكتملة</b> — بيانات تقرير الإنتاج اتسترجعت تلقائياً (آخر حفظ '+new Date(S._ts||Date.now()).toTimeString().slice(0,5)+'). كمّل من مكان ما وقفت.';document.body.insertBefore(b,document.body.children[1]||null);setTimeout(()=>b.remove(),15000)}}};
+ if(navigator.storage&&navigator.storage.persist)navigator.storage.persist().catch(()=>{})})();
+</script></body></html>
