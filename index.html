@@ -86,7 +86,7 @@ table.sum th{background:var(--g);color:#fff}
  <button class="btn3" id="bNew">يوم جديد</button>
 </div>
 <div id="busy">جاري عمل التقرير PDF…</div>
-<script src="html2canvas.min.js"></script><script src="jspdf.umd.min.js"></script><script src="prod-report.js?v=14"></script>
+<script src="html2canvas.min.js"></script><script src="jspdf.umd.min.js"></script><script src="prod-report.js?v=15"></script>
 <script>
 if(/iPad|iPhone|iPod/.test(navigator.userAgent)||(navigator.platform==='MacIntel'&&navigator.maxTouchPoints>1)||(/Safari/.test(navigator.userAgent)&&!/Chrome|Chromium|CriOS|Android/.test(navigator.userAgent)))document.documentElement.classList.add('ios');
 
@@ -175,7 +175,7 @@ function sumTable(A){const ks=sumKeys(A);if(!ks.length)return '<div class="hint"
 $('addRow').onclick=()=>{S.rows.push(er());renderRows();upd();const i=S.rows.length-1;$('r'+i).scrollIntoView({behavior:'smooth'});$('r'+i).querySelector('input').focus()};
 $('bNew').onclick=()=>{if(confirm('هتبدأ يوم جديد وهتمسح بيانات اليوم الحالي. اتأكد إنك بعت الملف الأول. متأكد؟')){S=blank(S.h.eng,S.h.exp);delete S.h.code;save();initHeader();renderRows();upd();scrollTo(0,0)}};
 function reportDay(){return S.h.date||new Date().toISOString().slice(0,10)}
-function reportTitle(){return 'تقرير تشغيل يوم '+reportDay()}
+function reportTitle(date){const d=String(date??'').trim()||reportDay();return 'تشغيل العلا يوم '+d}
 function fname(ext){return reportTitle()+'.'+ext}
 const used=()=>S.rows.map((r,i)=>({...r,i:i+1})).filter(filled);
 const COLS=['م','رقم الباليت','الصنف','المقاس','نوع التعبئة','نوع الكرتون','اسم الكرتون','الدرجة','مكان التخزين','عدد الكراتين','وزن الكرتونة (كجم)','ملاحظات'];
@@ -183,8 +183,8 @@ const COLS=['م','رقم الباليت','الصنف','المقاس','نوع ا�
 function repData(){if(!S.h.code){const d=new Date(),p=x=>String(x).padStart(2,'0');S.h.code='PR-'+(S.h.date||'').replace(/-/g,'')+'-'+p(d.getHours())+p(d.getMinutes())+'-'+Math.random().toString(36).slice(2,6).toUpperCase();save()}
  const d=new Date();const A=analyse(),N=v=>v===''||v==null?'':(isNaN(Number(v))?v:Number(v));const aoa=[['الإنتاج اليومي — شركة العلا لفرز الحاصلات الزراعية'],[],['تاريخ الإنتاج',S.h.date],['مهندس التشغيل',S.h.eng],['المُصدر',S.h.exp||'العلا'],['الوردية',S.h.shift||''],['كود التقرير',S.h.code],['عدد الباليتات',A.pal],['إجمالي الكراتين',A.run],['إجمالي الوزن كجم',A.kg],[],COLS,...used().map(x=>[x.i,x.p,x.v,sizeExport(x),x.pk,x.c,x.b,x.g,x.loc,N(x.n),N(x.w),x.note])];return {aoa,code:S.h.code,date:S.h.date,shift:S.h.shift,eng:S.h.eng,exp:S.h.exp||'العلا',at:d.toTimeString().slice(0,5),rows:used().filter(r=>r.p||r.v||r.n)}}
 $('bPrint').onclick=async()=>{const d=repData();if(!d.rows.length)return alert('مفيش باليتات مسجلة');$('busy').style.display='flex';
- try{const blob=await PR.pdf(d);const name=fname('pdf');const f=new File([blob],name,{type:'application/pdf'});$('busy').style.display='none';
-  if(navigator.canShare&&navigator.canShare({files:[f]})){try{await navigator.share({files:[f],title:reportTitle(),text:reportTitle()+' — شركة العلا ('+d.code+')'});return}catch(e){if(e.name==='AbortError')return}}
+ try{const blob=await PR.pdf(d);const title=reportTitle(d.date);const name=title+'.pdf';const f=new File([blob],name,{type:'application/pdf'});$('busy').style.display='none';
+  if(navigator.canShare&&navigator.canShare({files:[f]})){try{await navigator.share({files:[f],title,text:title});return}catch(e){if(e.name==='AbortError')return}}
   download(blob,name)}catch(e){$('busy').style.display='none';alert('حصلت مشكلة: '+e.message)}};
 const crcT=(()=>{const t=new Uint32Array(256);for(let n=0;n<256;n++){let c=n;for(let k=0;k<8;k++)c=c&1?0xEDB88320^(c>>>1):c>>>1;t[n]=c}return t})();
 function crc(b){let c=~0;for(let i=0;i<b.length;i++)c=crcT[(c^b[i])&255]^(c>>>8);return ~c>>>0}
@@ -222,10 +222,10 @@ function csv(){const A=analyse();const q=v=>'"'+String(v??'').replace(/"/g,'""')
  return new Blob(['\ufeff'+o.join('\r\n')],{type:'text/csv;charset=utf-8'})}
 $('bShare').onclick=async()=>{
  const f=new File([makeXlsx()],fname('xlsx'),{type:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'});
- const A=analyse();const text=`الإنتاج اليومي ${S.h.date} — ${A.pal} باليت / ${A.run} كرتونة / ${A.kg} كجم`;
- if(navigator.canShare&&navigator.canShare({files:[f]})){try{await navigator.share({files:[f],title:reportTitle(),text});return}catch(e){if(e.name==='AbortError')return}}
+ const title=reportTitle();
+ if(navigator.canShare&&navigator.canShare({files:[f]})){try{await navigator.share({files:[f],title,text:title});return}catch(e){if(e.name==='AbortError')return}}
  const c=new File([csv()],fname('csv'),{type:'text/csv'});
- if(navigator.canShare&&navigator.canShare({files:[c]})){try{await navigator.share({files:[c],text});return}catch(e){if(e.name==='AbortError')return}}
+ if(navigator.canShare&&navigator.canShare({files:[c]})){try{await navigator.share({files:[c],title,text:title});return}catch(e){if(e.name==='AbortError')return}}
  download(csv(),fname('csv'));alert('المشاركة المباشرة مش مدعومة هنا — اتحفظ ملف CSV. للـ PDF استخدم زرار "PDF / طباعة".');
 };
 if(location.hash==='#demo'){S=blank();S.h.eng='م. أحمد';
