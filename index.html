@@ -60,7 +60,7 @@ table.sum th{background:var(--g);color:#fff}
 </style>
 </head>
 <body>
-<script src="auth-gate.js?v=2"></script>
+<script src="auth-gate.js?v=3"></script>
 <header class="bar"><h1>الإنتاج اليومي</h1><div class="stat" id="stat"></div></header>
 <main>
  <div class="card"><h2>بيانات اليوم</h2>
@@ -73,7 +73,7 @@ table.sum th{background:var(--g);color:#fff}
  </div>
  <div class="card alerts" id="alerts"></div>
  <div class="card"><h2>الباليتات</h2>
-  <div class="hint">كل باليت في كارت. رقم الباليت من الاستيكر: حرف P وبعده أرقام (مثال P0001 أو P-9001، لحد 12 حرف)، بيتحول كابيتال تلقائي. وزن الكرتونة بيتكتب لوحده من نوع الكرتون وتقدر تغيره. لو الباليت فيه أكثر من مقاس اختار MIX وسجّل عدد الكراتين لكل مقاس. اسم الكرتون تقدر تضيفه من «+ اسم جديد».</div><br>
+  <div class="hint">كل باليت في كارت. رقم الباليت من الاستيكر: حرف P وبعده أرقام (مثال P0001 أو P-9001، لحد 12 حرف)، بيتحول كابيتال تلقائي. وزن الكرتونة بيتكتب لوحده من نوع الكرتون وتقدر تغيره. لو الباليت فيه أكثر من مقاس اختار MIX وسجّل عدد الكراتين لكل مقاس. المقاس تقدر تضيفه من «+ مقاس جديد»، واسم الكرتون من «+ اسم جديد».</div><br>
   <div id="rows"></div>
   <button class="btn2" style="width:100%" id="addRow">+ إضافة باليت</button>
  </div>
@@ -87,11 +87,11 @@ table.sum th{background:var(--g);color:#fff}
  <button class="btn3" id="bNew">يوم جديد</button>
 </div>
 <div id="busy">جاري عمل التقرير PDF…</div>
-<script src="html2canvas.min.js"></script><script src="jspdf.umd.min.js"></script><script src="prod-report.js?v=15"></script>
+<script src="html2canvas.min.js"></script><script src="jspdf.umd.min.js"></script><script src="prod-report.js?v=16"></script>
 <script>
 if(/iPad|iPhone|iPod/.test(navigator.userAgent)||(navigator.platform==='MacIntel'&&navigator.maxTouchPoints>1)||(/Safari/.test(navigator.userAgent)&&!/Chrome|Chromium|CriOS|Android/.test(navigator.userAgent)))document.documentElement.classList.add('ios');
 
-const L={"variety": ["أبو سرة", "صيفي", "موركيت كيني", "موركيت إسباني", "ليمون"], "size": ["20", "28", "32", "36", "40", "42", "48", "56", "64", "72", "80", "88", "100", "113"], "carton": ["أوبن توب 7 ك", "مقفول صغير 7 ك", "مقفول 14 ك", "مقفول 15 ك"], "exporter": ["العلا", "الحسن", "صن فروت"], "grade": ["أولى", "وسط", "ثانية"], "loc": ["الصالة", "الثلاجة"], "pack": ["كرتون", "صندوق بلاستيك"], "brand": ["العلا", "الحسن", "كوكلو"]};
+const L={"variety": ["أبو سرة", "صيفي", "موركيت كيني", "موركيت إسباني", "ليمون"], "size": ["20", "24", "28", "32", "36", "40", "42", "48", "56", "64", "72", "80", "88", "100", "113"], "carton": ["أوبن توب 7 ك", "مقفول صغير 7 ك", "مقفول 14 ك", "مقفول 15 ك"], "exporter": ["العلا", "الحسن", "صن فروت"], "grade": ["أولى", "وسط", "ثانية"], "loc": ["الصالة", "الثلاجة"], "pack": ["كرتون", "صندوق بلاستيك"], "brand": ["العلا", "الحسن", "كوكلو"]};
 const MAXDEF=10,KEY='alola_production_v1',F=['p','v','s','pk','c','b','g','loc','n','w','note'],REQ=['p','v','s','pk','c','b','g','loc','n'];
 const NAMES={p:'رقم الباليت',v:'الصنف',s:'المقاس',pk:'نوع التعبئة',c:'نوع الكرتون',b:'اسم الكرتون',g:'الدرجة',loc:'مكان التخزين',n:'عدد الكراتين',w:'وزن الكرتونة (كجم)',note:'ملاحظات'};
 const er=()=>Object.fromEntries(F.map(k=>[k,'']));
@@ -104,20 +104,26 @@ const esc=s=>String(s??'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&g
 function opts(list,val,ph){let h=`<option value="">${ph}</option>`+list.map(x=>`<option${x===val?' selected':''}>${esc(x)}</option>`).join('');if(val&&!list.includes(val))h+=`<option selected>${esc(val)}</option>`;return h}
 const VALID=/^(?=.*\d)P[A-Z0-9-]{1,11}$/;
 const wOf=c=>{const m=String(c).match(/(\d+(?:\.\d+)?)\s*ك/);return m?m[1]:''};
-const XK='alola_production_extra';let XL={};try{XL=JSON.parse(localStorage.getItem(XK))||{}}catch(e){}XL.carton=XL.carton||[];XL.exporter=XL.exporter||[];XL.brand=XL.brand||[];const saveXL=()=>{try{localStorage.setItem(XK,JSON.stringify(XL))}catch(e){}};
+const XK='alola_production_extra';let XL={};try{XL=JSON.parse(localStorage.getItem(XK))||{}}catch(e){}XL.carton=XL.carton||[];XL.exporter=XL.exporter||[];XL.brand=XL.brand||[];XL.size=XL.size||[];const saveXL=()=>{try{localStorage.setItem(XK,JSON.stringify(XL))}catch(e){}};
+const isMaggiName=s=>/ماجي|maggi/i.test(String(s||''));
+function expDisplay(x){const s=String(x??'').trim();if(!s)return 'العلا';return isMaggiName(s)?'مصدر محفوظ':s}
+function normalizeSize(s){s=String(s||'').trim();if(!s||/^mix$/i.test(s)||s==='__new'||isMaggiName(s))return '';if(/^\d+(\.\d+)?$/.test(s)){const n=Number(s);if(!(n>0)||!isFinite(n))return '';return Number.isInteger(n)?String(n):String(n)}return s.length<=12&&![...s].some(ch=>'<>\n\r'.includes(ch))?s:''}
+function SZ(){const used=[];(S&&S.rows||[]).forEach(r=>{if(r.s&&r.s!=='MIX')used.push(r.s);(Array.isArray(r.mix)?r.mix:[]).forEach(x=>{if(x&&x.s)used.push(x.s)})});return [...new Set(L.size.concat(XL.size||[]).concat(used).map(z=>normalizeSize(z)).filter(Boolean))].sort((a,b)=>sizeSortKey(a)-sizeSortKey(b)||String(a).localeCompare(String(b),'ar'))}
+function addCustomSize(){const x=normalizeSize(prompt('المقاس الجديد:')||'');if(!x)return '';if(!SZ().includes(x)){XL.size.push(x);saveXL()}return x}
+
 const CT=()=>[...new Set(L.carton.concat(XL.carton))],EXL=()=>[...new Set(L.exporter.concat(XL.exporter))],BR=()=>[...new Set(L.brand.concat(XL.brand))];
-function mixLines(r){return (Array.isArray(r.mix)?r.mix:[]).map(x=>{const s=String(x&&x.s||'').trim();const n=String(x&&x.n||'').trim();if(!L.size.includes(s)||!/^[1-9]\d*$/.test(n))return null;return {s,n:parseInt(n,10)}}).filter(Boolean)}
+function mixLines(r){return (Array.isArray(r.mix)?r.mix:[]).map(x=>{const s=String(x&&x.s||'').trim();const n=String(x&&x.n||'').trim();if(!SZ().includes(s)||!/^[1-9]\d*$/.test(n))return null;return {s,n:parseInt(n,10)}}).filter(Boolean)}
 function mixSum(r){return mixLines(r).reduce((a,x)=>a+x.n,0)}
 function sizeLabel(r){if(!r||r.s!=='MIX')return r&&r.s||'';const lines=mixLines(r);return lines.length?('MIX ('+lines.map(x=>x.s+'×'+x.n).join('، ')+')'):'MIX'}
 function sizeSortKey(s){if(String(s).startsWith('MIX'))return 10000;const n=parseFloat(s);return isNaN(n)?9999:n}
 const numOrText=v=>v===''||v==null?'':(isNaN(Number(v))?v:Number(v));
 function sizeExport(r){return r&&r.s==='MIX'?sizeLabel(r):numOrText(r&&r.s)}
-function initExp(){const el=$('exp');if(!S.h.exp)S.h.exp='العلا';el.innerHTML=EXL().map(x=>`<option${x===S.h.exp?' selected':''}>${esc(x)}</option>`).join('')+(EXL().includes(S.h.exp)?'':`<option selected>${esc(S.h.exp)}</option>`)+'<option value="__new">+ مُصدر جديد…</option>';el.onchange=()=>{if(el.value==='__new'){const x=(prompt('اسم المُصدر الجديد:')||'').trim();if(x){if(!EXL().includes(x)){XL.exporter.push(x);saveXL()}S.h.exp=x}initExp();save();upd();return}S.h.exp=el.value;save();upd()}}
+function initExp(){const el=$('exp');if(!S.h.exp)S.h.exp='العلا';const list=EXL().filter(x=>!isMaggiName(x));const kept=isMaggiName(S.h.exp);el.innerHTML=list.map(x=>`<option${!kept&&x===S.h.exp?' selected':''}>${esc(x)}</option>`).join('')+(kept?'<option value="__kept" selected>مصدر محفوظ</option>':(list.includes(S.h.exp)?'':`<option selected>${esc(S.h.exp)}</option>`))+'<option value="__new">+ مُصدر جديد…</option>';el.onchange=()=>{if(el.value==='__kept')return;if(el.value==='__new'){const x=(prompt('اسم المُصدر الجديد:')||'').trim();if(x&&!isMaggiName(x)){if(!EXL().includes(x)){XL.exporter.push(x);saveXL()}S.h.exp=x}else if(x&&isMaggiName(x)){alert('الاسم ده غير متاح')}initExp();save();upd();return}S.h.exp=el.value;save();upd()}}
 function initHeader(){initExp();if(!S.h.shift)S.h.shift='صباحي';['date','eng','shift'].forEach(k=>{const el=$(k);el.value=S.h[k]||'';el.oninput=el.onchange=()=>{S.h[k]=el.value;upd()}})}
 function sel(i,k,list,r){return `<div><div class="sl">${NAMES[k]}</div><select data-i="${i}" data-k="${k}">${opts(list,r[k],'— اختار —')}</select></div>`}
-function sizeSelect(i,r){return `<div><div class="sl">${NAMES.s}</div><select data-i="${i}" data-k="s">${opts(L.size,r.s==='MIX'?'':r.s,'— اختار —')}<option value="MIX"${r.s==='MIX'?' selected':''}>MIX — أكثر من مقاس</option></select></div>`}
+function sizeSelect(i,r){return `<div><div class="sl">${NAMES.s}</div><select data-i="${i}" data-k="s">${opts(SZ(),r.s==='MIX'?'':r.s,'— اختار —')}<option value="MIX"${r.s==='MIX'?' selected':''}>MIX — أكثر من مقاس</option><option value="__new">+ مقاس جديد…</option></select></div>`}
 function mixEditor(i,r){if(r.s!=='MIX')return '';const lines=Array.isArray(r.mix)&&r.mix.length?r.mix:[{s:'',n:''},{s:'',n:''}];
- return `<div class="mix"><div class="mixh">تفصيل المقاسات داخل الباليت — عدد الكراتين لكل مقاس</div>${lines.map((ln,j)=>`<div class="mixln"><select data-i="${i}" data-mix="${j}" data-mk="s">${opts(L.size,ln.s,'— المقاس —')}</select><input data-i="${i}" data-mix="${j}" data-mk="n" type="number" inputmode="numeric" min="1" step="1" placeholder="عدد الكراتين" value="${esc(ln.n)}"><button type="button" class="mixrm" data-i="${i}" data-mix="${j}" aria-label="حذف المقاس">×</button></div>`).join('')}<button type="button" class="mixadd" data-i="${i}">+ مقاس</button><div class="mixsum" id="mixsum${i}"></div></div>`}
+ return `<div class="mix"><div class="mixh">تفصيل المقاسات داخل الباليت — عدد الكراتين لكل مقاس</div>${lines.map((ln,j)=>`<div class="mixln"><select data-i="${i}" data-mix="${j}" data-mk="s">${opts(SZ(),ln.s,'— المقاس —')}<option value="__new">+ مقاس جديد…</option></select><input data-i="${i}" data-mix="${j}" data-mk="n" type="number" inputmode="numeric" min="1" step="1" placeholder="عدد الكراتين" value="${esc(ln.n)}"><button type="button" class="mixrm" data-i="${i}" data-mix="${j}" aria-label="حذف المقاس">×</button></div>`).join('')}<button type="button" class="mixadd" data-i="${i}">+ مقاس</button><div class="mixsum" id="mixsum${i}"></div></div>`}
 function renderRows(){
  $('rows').innerHTML=S.rows.map((r,i)=>`<div class="row" id="r${i}"><div class="top"><span class="num">${i+1}</span>
  <input data-i="${i}" data-k="p" value="${esc(r.p)}" placeholder="P0000 / P-9001" inputmode="text" autocapitalize="characters" autocomplete="off" maxlength="12">
@@ -133,7 +139,7 @@ function applyMixField(t){const i=+t.dataset.i,j=+t.dataset.mix,r=S.rows[i];r.mi
 document.addEventListener('input',e=>{const t=e.target;if(t.dataset.i===undefined||t.value==='__new')return;if(t.dataset.mk){applyMixField(t);upd();return}let v=t.value;
  if(t.dataset.k==='p'){const pos=t.selectionStart;v=v.toUpperCase().replace(/\s/g,'');t.value=v;try{t.setSelectionRange(pos,pos)}catch(_){}}
  S.rows[t.dataset.i][t.dataset.k]=v;upd()});
-document.addEventListener('change',e=>{const t=e.target;if(t.dataset.i===undefined)return;if(t.dataset.mk){applyMixField(t);upd();return}if(t.value==='__new'){const i=+t.dataset.i;if(t.dataset.k==='b'){const x=(prompt('اسم الكرتون الجديد:')||'').trim();if(x&&!BR().includes(x)){XL.brand.push(x);saveXL()}S.rows[i].b=x||S.rows[i].b}else{const x=(prompt('اسم نوع الكرتون الجديد (مثال: مقفول 10 ك):')||'').trim();if(x&&!CT().includes(x)){XL.carton.push(x);saveXL()}S.rows[i].c=x||S.rows[i].c}save();renderRows();upd();return}const r=S.rows[t.dataset.i];r[t.dataset.k]=t.value;
+document.addEventListener('change',e=>{const t=e.target;if(t.dataset.i===undefined)return;if(t.dataset.mk){if(t.value==='__new'&&t.dataset.mk==='s'){const x=addCustomSize();const i=+t.dataset.i,j=+t.dataset.mix,r=S.rows[i];r.mix=Array.isArray(r.mix)?r.mix:[];while(r.mix.length<=j)r.mix.push({s:'',n:''});r.mix[j].s=x||r.mix[j].s||'';save();renderRows();upd();return}applyMixField(t);upd();return}if(t.value==='__new'){const i=+t.dataset.i;if(t.dataset.k==='s'){const x=addCustomSize();S.rows[i].s=x||S.rows[i].s;save();renderRows();upd();return}if(t.dataset.k==='b'){const x=(prompt('اسم الكرتون الجديد:')||'').trim();if(x&&!isMaggiName(x)&&!BR().includes(x)){XL.brand.push(x);saveXL()}S.rows[i].b=(x&&!isMaggiName(x)?x:S.rows[i].b)}else{const x=(prompt('اسم نوع الكرتون الجديد (مثال: مقفول 10 ك):')||'').trim();if(x&&!isMaggiName(x)&&!CT().includes(x)){XL.carton.push(x);saveXL()}S.rows[i].c=(x&&!isMaggiName(x)?x:S.rows[i].c)}save();renderRows();upd();return}const r=S.rows[t.dataset.i];r[t.dataset.k]=t.value;
  if(t.dataset.k==='s'){if(t.value==='MIX'&&(!Array.isArray(r.mix)||r.mix.length<2))r.mix=[{s:'',n:''},{s:'',n:''}];save();renderRows();upd();return}
  if(t.dataset.k==='c'){const w=wOf(t.value);if(w){r.w=w;const el=document.querySelector(`[data-i="${t.dataset.i}"][data-k="w"]`);if(el)el.value=w}}upd()});
 document.addEventListener('click',e=>{const t=e.target.closest('.mixadd,.mixrm');if(!t)return;const i=+t.dataset.i,r=S.rows[i];r.mix=Array.isArray(r.mix)?r.mix:[];if(t.classList.contains('mixadd'))r.mix.push({s:'',n:''});else{const j=+t.dataset.mix;if(r.mix.length<=2)r.mix[j]={s:'',n:''};else r.mix.splice(j,1);if(mixLines(r).length)r.n=String(mixSum(r))}save();renderRows();upd()});
@@ -182,7 +188,7 @@ const used=()=>S.rows.map((r,i)=>({...r,i:i+1})).filter(filled);
 const COLS=['م','رقم الباليت','الصنف','المقاس','نوع التعبئة','نوع الكرتون','اسم الكرتون','الدرجة','مكان التخزين','عدد الكراتين','وزن الكرتونة (كجم)','ملاحظات'];
 /* ---------- PDF v9 ---------- */
 function repData(){if(!S.h.code){const d=new Date(),p=x=>String(x).padStart(2,'0');S.h.code='PR-'+(S.h.date||'').replace(/-/g,'')+'-'+p(d.getHours())+p(d.getMinutes())+'-'+Math.random().toString(36).slice(2,6).toUpperCase();save()}
- const d=new Date();const A=analyse(),N=v=>v===''||v==null?'':(isNaN(Number(v))?v:Number(v));const aoa=[['الإنتاج اليومي — شركة العلا لفرز الحاصلات الزراعية'],[],['تاريخ الإنتاج',S.h.date],['مهندس التشغيل',S.h.eng],['المُصدر',S.h.exp||'العلا'],['الوردية',S.h.shift||''],['كود التقرير',S.h.code],['عدد الباليتات',A.pal],['إجمالي الكراتين',A.run],['إجمالي الوزن كجم',A.kg],[],COLS,...used().map(x=>[x.i,x.p,x.v,sizeExport(x),x.pk,x.c,x.b,x.g,x.loc,N(x.n),N(x.w),x.note])];return {aoa,code:S.h.code,date:S.h.date,shift:S.h.shift,eng:S.h.eng,exp:S.h.exp||'العلا',at:d.toTimeString().slice(0,5),rows:used().filter(r=>r.p||r.v||r.n)}}
+ const d=new Date();const A=analyse(),N=v=>v===''||v==null?'':(isNaN(Number(v))?v:Number(v));const aoa=[['الإنتاج اليومي — شركة العلا لفرز الحاصلات الزراعية'],[],['تاريخ الإنتاج',S.h.date],['مهندس التشغيل',S.h.eng],['المُصدر',expDisplay(S.h.exp)],['الوردية',S.h.shift||''],['كود التقرير',S.h.code],['عدد الباليتات',A.pal],['إجمالي الكراتين',A.run],['إجمالي الوزن كجم',A.kg],[],COLS,...used().map(x=>[x.i,x.p,x.v,sizeExport(x),x.pk,x.c,x.b,x.g,x.loc,N(x.n),N(x.w),x.note])];return {aoa,code:S.h.code,date:S.h.date,shift:S.h.shift,eng:S.h.eng,exp:expDisplay(S.h.exp),at:d.toTimeString().slice(0,5),rows:used().filter(r=>r.p||r.v||r.n)}}
 $('bPrint').onclick=async()=>{const d=repData();if(!d.rows.length)return alert('مفيش باليتات مسجلة');$('busy').style.display='flex';
  try{const blob=await PR.pdf(d);const title=reportTitle(d.date);const name=title+'.pdf';const f=new File([blob],name,{type:'application/pdf'});$('busy').style.display='none';
   if(navigator.canShare&&navigator.canShare({files:[f]})){try{await navigator.share({files:[f],title,text:title});return}catch(e){if(e.name==='AbortError')return}}
@@ -204,7 +210,7 @@ function makeXlsx(){const A=analyse();const R=[];let r=1;
  const cell=(c,v,s)=>typeof v==='number'?`<c r="${c}"${s?` s="${s}"`:''}><v>${v}</v></c>`:`<c r="${c}" t="inlineStr"${s?` s="${s}"`:''}><is><t>${X(v)}</t></is></c>`;
  const row=(vals,s)=>{R.push(`<row r="${r}">${vals.map((v,i)=>v===''||v==null?'':cell(colL(i)+r,v,s)).join('')}</row>`);r++};
  row(['الإنتاج اليومي — شركة العلا لفرز الحاصلات الزراعية'],1);r++;
- [['تاريخ الإنتاج',S.h.date],['مهندس التشغيل',S.h.eng],['المُصدر',S.h.exp||'العلا'],['عدد الباليتات',A.pal],['إجمالي الكراتين',A.run],['إجمالي الوزن كجم',A.kg]].forEach(x=>row(x));
+ [['تاريخ الإنتاج',S.h.date],['مهندس التشغيل',S.h.eng],['المُصدر',expDisplay(S.h.exp)],['عدد الباليتات',A.pal],['إجمالي الكراتين',A.run],['إجمالي الوزن كجم',A.kg]].forEach(x=>row(x));
  r++;row(COLS,2);
  const N=v=>v===''?'':(isNaN(Number(v))?v:Number(v));
  used().forEach(x=>row([x.i,x.p,x.v,sizeExport(x),x.pk,x.c,x.b,x.g,x.loc,N(x.n),N(x.w),x.note]));
@@ -218,7 +224,7 @@ function makeXlsx(){const A=analyse();const R=[];let r=1;
  ['xl/worksheets/sheet1.xml',sheet]])}
 $('bXlsx').onclick=()=>download(makeXlsx(),fname('xlsx'));
 function csv(){const A=analyse();const q=v=>'"'+String(v??'').replace(/"/g,'""')+'"';const o=[];
- [['تاريخ الإنتاج',S.h.date],['مهندس التشغيل',S.h.eng],['المُصدر',S.h.exp||'العلا'],['عدد الباليتات',A.pal],['إجمالي الكراتين',A.run],['إجمالي الوزن كجم',A.kg],[]].forEach(x=>o.push(x.map(q).join(',')));
+ [['تاريخ الإنتاج',S.h.date],['مهندس التشغيل',S.h.eng],['المُصدر',expDisplay(S.h.exp)],['عدد الباليتات',A.pal],['إجمالي الكراتين',A.run],['إجمالي الوزن كجم',A.kg],[]].forEach(x=>o.push(x.map(q).join(',')));
  o.push(COLS.map(q).join(','));used().forEach(x=>o.push([x.i,x.p,x.v,sizeLabel(x),x.pk,x.c,x.b,x.g,x.loc,x.n,x.w,x.note].map(q).join(',')));
  return new Blob(['\ufeff'+o.join('\r\n')],{type:'text/csv;charset=utf-8'})}
 $('bShare').onclick=async()=>{

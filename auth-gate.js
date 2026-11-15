@@ -1,4 +1,4 @@
-/*! Alola/Maggi shared login gate — talks to alola-maggi-auth */
+/*! Alola shared login gate — talks to alola-maggi-auth */
 (function () {
   'use strict';
   var API = (window.ALOLA_AUTH_API || 'https://alola-maggi-auth.onrender.com').replace(/\/$/, '');
@@ -95,7 +95,7 @@
     el.innerHTML = [
       '<div class="box">',
       '<h2>تسجيل الدخول</h2>',
-      '<p class="sub">برامج العلا وماجي — أدخل اليوزر والباسورد</p>',
+      '<p class="sub">برنامج الإنتاج اليومي — أدخل اليوزر والباسورد</p>',
       '<label>اليوزر</label>',
       '<input id="alola-auth-user" autocomplete="username" autocapitalize="off" spellcheck="false">',
       '<label>الباسورد</label>',

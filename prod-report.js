@@ -1,6 +1,7 @@
 /* Production report PDF v14 — Alola letterhead */
 (function(){
 const e=s=>String(s??'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const expDisplay=x=>{const s=String(x??'').trim();if(!s)return 'العلا';return /ماجي|maggi/i.test(s)?'مصدر محفوظ':s};
 const r1=x=>Math.round(x*10)/10, nf=x=>Number(r1(x)).toLocaleString('en-US');
 const VORDER=['أبو سرة','صيفي','موركيت كيني','موركيت إسباني','ليمون'];
 const CSS=`@font-face{font-family:Cairo;font-weight:200 1000;src:url(fonts/cairo-arabic.woff2) format('woff2');unicode-range:U+0600-06FF,U+0750-077F,U+FB50-FDFF,U+FE70-FEFF,U+200C-200E}
@@ -13,10 +14,10 @@ function sizeCell(r){if(r.s==='MIX'){const p=mixParts(r);const br=p.map(x=>`<div
 function vRank(v){const i=VORDER.indexOf(v);return i<0?50:i}
 function sRank(s){if(s==='MIX')return 10000;const n=parseFloat(s);return isNaN(n)?9999:n}
 function varietiesOf(rows){const map=new Map();rows.forEach(r=>{const v=r.v||'غير محدد';if(!map.has(v))map.set(v,[]);map.get(v).push(r)});const list=[...map.entries()].map(([v,rs])=>({v,rows:rs}));list.sort((a,b)=>vRank(a.v)-vRank(b.v)||a.v.localeCompare(b.v,'ar'));list.forEach(g=>g.rows.sort((a,b)=>sRank(a.s)-sRank(b.s)||String(a.p).localeCompare(String(b.p),'en')));return list}
-function byExp(rows,dexp){const map=new Map();rows.forEach(r=>{const x=r.exp||dexp||'العلا';if(!map.has(x))map.set(x,[]);map.get(x).push(r)});return [...map.entries()]}
+function byExp(rows,dexp){const map=new Map();rows.forEach(r=>{const x=expDisplay(r.exp||dexp||'العلا');if(!map.has(x))map.set(x,[]);map.get(x).push(r)});return [...map.entries()]}
 function mastHTML(){return `<div class="chromeTop"><div class="mast"><div><div class="nm">شركة العلا لفرز الحاصلات الزراعية</div><div class="sub">Al Ola for Agricultural Crops Sorting</div></div><img src="alola_logo_green.png" alt=""></div><div class="rule1"></div><div class="rulegap"></div><div class="rule2"></div></div>`}
 function footHTML(n,pages,d,dt){const center='تقرير الإنتاج اليومي — <span dir="ltr">'+e(dt.dmy)+'</span> — وردية '+e(d.shift||'—');return `<div class="foot"><div class="pmeta"><span dir="ltr">${e(d.code||'')}</span><span>${center}</span><span>صفحة ${n} من ${pages}</span></div><div class="co"><div class="r"><span>العنوان: قطعة رقم ٢٠٦ ورقم ٢٠٨ - حوض البطن رقم ٥ - ترسا - طوخ - قليوبية</span><span dir="ltr">E-mail: alola.co2023@gmail.com</span></div><div class="ln"></div><div class="r"><span dir="ltr">Tel: 013/2604937 | Fax: 013/2604938</span><span>ب.ض 206232 · س.ت 798-899-781</span></div></div></div>`}
-function introHTML(d,rows,dt){const N=rows.reduce((a,r)=>a+r._n,0),KG=rows.reduce((a,r)=>a+r._kg,0),P=rows.filter(r=>r.p).length,exp=e(d.exp||'العلا');
+function introHTML(d,rows,dt){const N=rows.reduce((a,r)=>a+r._n,0),KG=rows.reduce((a,r)=>a+r._kg,0),P=rows.filter(r=>r.p).length,exp=e(expDisplay(d.exp||'العلا'));
  return `<div class="meta"><div class="ref">الرقم المرجعي: <b dir="ltr">${e(d.code||'')}</b></div><div class="edt">تحريراً في: <b dir="ltr">${e(dt.slash)}</b></div></div>
  <div class="ttl"><div class="tt"><h1>تقرير الإنتاج اليومي</h1><div class="en">DAILY PRODUCTION REPORT · OPERATIONS</div></div><div class="pill">وردية ${e(d.shift||'—')} · <span dir="ltr">${e(dt.dmy)}</span></div></div>
  <div class="inf"><div><small>التاريخ</small><b dir="ltr">${e(dt.iso)}</b></div><div><small>الوردية</small><b>${e(d.shift||'—')}</b></div><div><small>مهندس التشغيل</small><b>${e(d.eng||'—')}</b></div><div><small>المصدر</small><b>${exp}</b></div><div><small>وقت الإصدار</small><b dir="ltr">${e(d.at||'—')}</b></div></div>
