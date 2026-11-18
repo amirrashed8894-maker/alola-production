@@ -57,6 +57,7 @@ table.sum th{background:var(--g);color:#fff}
 #busy{position:fixed;inset:0;background:#0007;color:#fff;display:none;align-items:center;justify-content:center;font-size:18px;z-index:200}
 .rgrid3{display:grid;grid-template-columns:1fr 1fr;gap:6px}
 .sl{font-size:11.5px;color:#777;margin:4px 0 2px}
+.szi{font-size:11px;color:#8a8a8a;margin-top:3px;line-height:1.35;min-height:0}.szi:empty{display:none}select:disabled,input:disabled{background:#f3f3f3;color:#999}small.szd{display:block;font-size:11px;color:#8a8a8a;font-weight:400}
 </style>
 <link rel="icon" href="icon-192.png"></head>
 <body>
@@ -73,7 +74,7 @@ table.sum th{background:var(--g);color:#fff}
  </div>
  <div class="card alerts" id="alerts"></div>
  <div class="card"><h2>الباليتات</h2>
-  <div class="hint">كل باليت في كارت. رقم الباليت من الاستيكر: حرف P وبعده أرقام (مثال P0001 أو P-9001، لحد 12 حرف)، بيتحول كابيتال تلقائي. وزن الكرتونة بيتكتب لوحده من نوع الكرتون وتقدر تغيره. لو الباليت فيه أكثر من مقاس اختار MIX وسجّل عدد الكراتين لكل مقاس. المقاس تقدر تضيفه من «+ مقاس جديد»، واسم الكرتون من «+ اسم جديد».</div><br>
+  <div class="hint">كل باليت في كارت. رقم الباليت من الاستيكر: حرف P وبعده أرقام (مثال P0001 أو P-9001، لحد 12 حرف)، بيتحول كابيتال تلقائي. اختار <b>الصنف الأول</b>، بعدين نوع التعبئة ونوع الكرتون/الصندوق، وبعدها تظهر المقاسات المناسبة له بس (الأفندي: اكتب عدد الحبات بالصندوق). تحت المقاس بيظهر القطر ووزن الحبة التقريبي بخط خفيف. وزن الكرتونة بيتكتب لوحده من نوع الكرتون وتقدر تغيره. لو الباليت فيه أكثر من مقاس اختار MIX وسجّل عدد الكراتين لكل مقاس. المقاس تقدر تضيفه من «+ مقاس جديد»، واسم الكرتون من «+ اسم جديد».</div><br>
   <div id="rows"></div>
   <button class="btn2" style="width:100%" id="addRow">+ إضافة باليت</button>
  </div>
@@ -87,11 +88,11 @@ table.sum th{background:var(--g);color:#fff}
  <button class="btn3" id="bNew">يوم جديد</button>
 </div>
 <div id="busy">جاري عمل التقرير PDF…</div>
-<script src="html2canvas.min.js"></script><script src="jspdf.umd.min.js"></script><script src="prod-report.js?v=16"></script>
+<script src="html2canvas.min.js"></script><script src="jspdf.umd.min.js"></script><script src="sizes.js?v=1"></script><script src="prod-report.js?v=17"></script>
 <script>
 if(/iPad|iPhone|iPod/.test(navigator.userAgent)||(navigator.platform==='MacIntel'&&navigator.maxTouchPoints>1)||(/Safari/.test(navigator.userAgent)&&!/Chrome|Chromium|CriOS|Android/.test(navigator.userAgent)))document.documentElement.classList.add('ios');
 
-const L={"variety": ["أبو سرة", "صيفي", "موركيت كيني", "موركيت إسباني", "ليمون"], "size": ["20", "24", "28", "32", "36", "40", "42", "48", "56", "64", "72", "80", "88", "100", "113"], "carton": ["أوبن توب 7 ك", "مقفول صغير 7 ك", "مقفول 14 ك", "مقفول 15 ك"], "exporter": ["العلا", "الحسن", "صن فروت"], "grade": ["أولى", "وسط", "ثانية"], "loc": ["الصالة", "الثلاجة"], "pack": ["كرتون", "صندوق بلاستيك"], "brand": ["العلا", "الحسن", "كوكلو"]};
+const L={"variety": ["أبو سرة", "صيفي", "ليمون", "كلمنتينا", "فريمونت", "موركيت كيني", "موركيت إسباني"], "size": ["20", "24", "28", "32", "36", "40", "42", "48", "56", "64", "72", "80", "88", "100", "113", "125", "138", "150", "162", "216"], "carton": ["أوبن توب 7 ك", "مقفول صغير 7 ك", "مقفول 14 ك", "مقفول 15 ك", "جامبو بلاستيك", "صندوق 2 ك", "صندوق 5 ك", "صندوق 7 ك", "صندوق 10 ك"], "exporter": ["العلا", "الحسن", "صن فروت"], "grade": ["أولى", "وسط", "ثانية"], "loc": ["الصالة", "الثلاجة"], "pack": ["كرتون", "صندوق بلاستيك"], "brand": ["العلا", "الحسن", "كوكلو"]};
 const MAXDEF=10,KEY='alola_production_v1',F=['p','v','s','pk','c','b','g','loc','n','w','note'],REQ=['p','v','s','pk','c','b','g','loc','n'];
 const NAMES={p:'رقم الباليت',v:'الصنف',s:'المقاس',pk:'نوع التعبئة',c:'نوع الكرتون',b:'اسم الكرتون',g:'الدرجة',loc:'مكان التخزين',n:'عدد الكراتين',w:'وزن الكرتونة (كجم)',note:'ملاحظات'};
 const er=()=>Object.fromEntries(F.map(k=>[k,'']));
@@ -111,6 +112,13 @@ function normalizeSize(s){s=String(s||'').trim();if(!s||/^mix$/i.test(s)||s==='_
 function SZ(){const used=[];(S&&S.rows||[]).forEach(r=>{if(r.s&&r.s!=='MIX')used.push(r.s);(Array.isArray(r.mix)?r.mix:[]).forEach(x=>{if(x&&x.s)used.push(x.s)})});return [...new Set(L.size.concat(XL.size||[]).concat(used).map(z=>normalizeSize(z)).filter(Boolean))].sort((a,b)=>sizeSortKey(a)-sizeSortKey(b)||String(a).localeCompare(String(b),'ar'))}
 function addCustomSize(){const x=normalizeSize(prompt('المقاس الجديد:')||'');if(!x)return '';if(!SZ().includes(x)){XL.size.push(x);saveXL()}return x}
 
+/* مقاسات حسب الصنف والعبوة (sizes.js مشترك مع الاستلام والجودة) */
+const GOF=v=>window.ALS?ALS.groupOf(v):'';
+function rowPack(r){const g=GOF(r.v);return g&&window.ALS?ALS.packOf(g,r.c,r.pk):null}
+function rowSizes(r){const g=GOF(r.v);if(!r.v)return [];if(!g||!window.ALS)return SZ();return ALS.sizesFor(g,rowPack(r))}
+function CTg(r){const g=GOF(r.v);if(!g||!window.ALS)return CT();const L2=ALS.packsFor(g).filter(p=>!r.pk||p.pk===r.pk).map(p=>p.carton);return [...new Set((L2.length?L2:ALS.packsFor(g).map(p=>p.carton)).concat(XL.carton))]}
+function szInfo(r,s,cnt){const g=GOF(r.v);if(!g||!window.ALS||!s||s==='MIX')return '';const pk=rowPack(r);const w=parseFloat(r.w)||0;const o=ALS.info(g,pk,s,pk&&pk.kg?(w||pk.kg):w);return ALS.text(o)}
+function szInfoHTML(r){if(r.s==='MIX'){return mixLines(r).map(x=>{const t=szInfo(r,x.s);return t?x.s+': '+t:''}).filter(Boolean).join('<br>')}const t=szInfo(r,r.s);if(t)return t;const g=GOF(r.v);if(r.v&&g==='mand'&&!rowPack(r))return 'اختار وزن الصندوق (2 / 5 / 7 / 10 ك) علشان يتحسب القطر ووزن الحبة';return ''}
 const CT=()=>[...new Set(L.carton.concat(XL.carton))],EXL=()=>[...new Set(L.exporter.concat(XL.exporter))],BR=()=>[...new Set(L.brand.concat(XL.brand))];
 function mixLines(r){return (Array.isArray(r.mix)?r.mix:[]).map(x=>{const s=String(x&&x.s||'').trim();const n=String(x&&x.n||'').trim();if(!SZ().includes(s)||!/^[1-9]\d*$/.test(n))return null;return {s,n:parseInt(n,10)}}).filter(Boolean)}
 function mixSum(r){return mixLines(r).reduce((a,x)=>a+x.n,0)}
@@ -121,14 +129,18 @@ function sizeExport(r){return r&&r.s==='MIX'?sizeLabel(r):numOrText(r&&r.s)}
 function initExp(){const el=$('exp');if(!S.h.exp)S.h.exp='العلا';const list=EXL().filter(x=>!isMaggiName(x));const kept=isMaggiName(S.h.exp);el.innerHTML=list.map(x=>`<option${!kept&&x===S.h.exp?' selected':''}>${esc(x)}</option>`).join('')+(kept?'<option value="__kept" selected>مصدر محفوظ</option>':(list.includes(S.h.exp)?'':`<option selected>${esc(S.h.exp)}</option>`))+'<option value="__new">+ مُصدر جديد…</option>';el.onchange=()=>{if(el.value==='__kept')return;if(el.value==='__new'){const x=(prompt('اسم المُصدر الجديد:')||'').trim();if(x&&!isMaggiName(x)){if(!EXL().includes(x)){XL.exporter.push(x);saveXL()}S.h.exp=x}else if(x&&isMaggiName(x)){alert('الاسم ده غير متاح')}initExp();save();upd();return}S.h.exp=el.value;save();upd()}}
 function initHeader(){initExp();if(!S.h.shift)S.h.shift='صباحي';['date','eng','shift'].forEach(k=>{const el=$(k);el.value=S.h[k]||'';el.oninput=el.onchange=()=>{S.h[k]=el.value;upd()}})}
 function sel(i,k,list,r){return `<div><div class="sl">${NAMES[k]}</div><select data-i="${i}" data-k="${k}">${opts(list,r[k],'— اختار —')}</select></div>`}
-function sizeSelect(i,r){return `<div><div class="sl">${NAMES.s}</div><select data-i="${i}" data-k="s">${opts(SZ(),r.s==='MIX'?'':r.s,'— اختار —')}<option value="MIX"${r.s==='MIX'?' selected':''}>MIX — أكثر من مقاس</option><option value="__new">+ مقاس جديد…</option></select></div>`}
+function sizeSelect(i,r){const g=GOF(r.v),list=rowSizes(r);const info=`<div class="szi" id="szi${i}">${szInfoHTML(r)}</div>`;
+ if(!r.v)return `<div><div class="sl">${NAMES.s}</div><select data-i="${i}" data-k="s" disabled>${r.s?opts([],r.s==='MIX'?'MIX':r.s,''):'<option>اختار الصنف الأول</option>'}</select>${info}</div>`;
+ if(list===null&&r.s!=='MIX')return `<div><div class="sl">${NAMES.s} — عدد الحبات بالصندوق</div><input data-i="${i}" data-k="s" type="number" inputmode="numeric" min="1" step="1" placeholder="اكتب العدد" value="${esc(r.s)}">${info}</div>`;
+ const L2=list||SZ();if(g&&!L2.length&&!r.s)return `<div><div class="sl">${NAMES.s}</div><select data-i="${i}" data-k="s" disabled><option>اختار نوع الكرتون الأول</option></select>${info}</div>`;
+ return `<div><div class="sl">${NAMES.s}</div><select data-i="${i}" data-k="s">${opts(L2,r.s==='MIX'?'':r.s,'— اختار —')}<option value="MIX"${r.s==='MIX'?' selected':''}>MIX — أكثر من مقاس</option><option value="__new">+ مقاس جديد…</option></select>${info}</div>`}
 function mixEditor(i,r){if(r.s!=='MIX')return '';const lines=Array.isArray(r.mix)&&r.mix.length?r.mix:[{s:'',n:''},{s:'',n:''}];
- return `<div class="mix"><div class="mixh">تفصيل المقاسات داخل الباليت — عدد الكراتين لكل مقاس</div>${lines.map((ln,j)=>`<div class="mixln"><select data-i="${i}" data-mix="${j}" data-mk="s">${opts(SZ(),ln.s,'— المقاس —')}<option value="__new">+ مقاس جديد…</option></select><input data-i="${i}" data-mix="${j}" data-mk="n" type="number" inputmode="numeric" min="1" step="1" placeholder="عدد الكراتين" value="${esc(ln.n)}"><button type="button" class="mixrm" data-i="${i}" data-mix="${j}" aria-label="حذف المقاس">×</button></div>`).join('')}<button type="button" class="mixadd" data-i="${i}">+ مقاس</button><div class="mixsum" id="mixsum${i}"></div></div>`}
+ return `<div class="mix"><div class="mixh">تفصيل المقاسات داخل الباليت — عدد الكراتين لكل مقاس</div>${lines.map((ln,j)=>`<div class="mixln"><select data-i="${i}" data-mix="${j}" data-mk="s">${opts(rowSizes(r)||SZ(),ln.s,'— المقاس —')}<option value="__new">+ مقاس جديد…</option></select><input data-i="${i}" data-mix="${j}" data-mk="n" type="number" inputmode="numeric" min="1" step="1" placeholder="عدد الكراتين" value="${esc(ln.n)}"><button type="button" class="mixrm" data-i="${i}" data-mix="${j}" aria-label="حذف المقاس">×</button></div>`).join('')}<button type="button" class="mixadd" data-i="${i}">+ مقاس</button><div class="mixsum" id="mixsum${i}"></div></div>`}
 function renderRows(){
  $('rows').innerHTML=S.rows.map((r,i)=>`<div class="row" id="r${i}"><div class="top"><span class="num">${i+1}</span>
  <input data-i="${i}" data-k="p" value="${esc(r.p)}" placeholder="P0000 / P-9001" inputmode="text" autocapitalize="characters" autocomplete="off" maxlength="12">
  <span class="run" id="run${i}"></span></div>
- <div class="rgrid3">${sel(i,'v',L.variety,r)}${sizeSelect(i,r)}${sel(i,'pk',L.pack,r)}${sel(i,'c',CT(),r).replace('</select>','<option value="__new">+ نوع جديد…</option></select>')}${sel(i,'b',BR(),r).replace('</select>','<option value="__new">+ اسم جديد…</option></select>')}${sel(i,'g',L.grade,r)}${sel(i,'loc',L.loc,r)}
+ <div class="rgrid3">${sel(i,'v',L.variety,r)}${sel(i,'pk',L.pack,r)}${sel(i,'c',CTg(r),r).replace('</select>','<option value="__new">+ نوع جديد…</option></select>')}${sizeSelect(i,r)}${sel(i,'b',BR(),r).replace('</select>','<option value="__new">+ اسم جديد…</option></select>')}${sel(i,'g',L.grade,r)}${sel(i,'loc',L.loc,r)}
  <div><div class="sl">عدد الكراتين</div><input data-i="${i}" data-k="n" type="number" inputmode="numeric" min="1" step="1" value="${esc(r.n)}"></div>
  <div><div class="sl">وزن الكرتونة (كجم)</div><input data-i="${i}" data-k="w" type="number" inputmode="decimal" min="0" step="0.1" value="${esc(r.w)}"></div></div>
  ${mixEditor(i,r)}
@@ -136,13 +148,26 @@ function renderRows(){
  <div class="msg" id="m${i}"></div></div>`).join('');
 }
 function applyMixField(t){const i=+t.dataset.i,j=+t.dataset.mix,r=S.rows[i];r.mix=Array.isArray(r.mix)?r.mix:[];while(r.mix.length<=j)r.mix.push({s:'',n:''});r.mix[j][t.dataset.mk]=t.value;const lines=mixLines(r);if(lines.length){r.n=String(mixSum(r));const nel=document.querySelector(`input[data-i="${i}"][data-k="n"]`);if(nel)nel.value=r.n}}
-document.addEventListener('input',e=>{const t=e.target;if(t.dataset.i===undefined||t.value==='__new')return;if(t.dataset.mk){applyMixField(t);upd();return}let v=t.value;
+document.addEventListener('input',e=>{const t=e.target;if(t.dataset.i===undefined||t.value==='__new')return;if(t.dataset.mk){applyMixField(t);upd();return}if(t.tagName==='SELECT')return;let v=t.value;
  if(t.dataset.k==='p'){const pos=t.selectionStart;v=v.toUpperCase().replace(/\s/g,'');t.value=v;try{t.setSelectionRange(pos,pos)}catch(_){}}
  S.rows[t.dataset.i][t.dataset.k]=v;upd()});
-document.addEventListener('change',e=>{const t=e.target;if(t.dataset.i===undefined)return;if(t.dataset.mk){if(t.value==='__new'&&t.dataset.mk==='s'){const x=addCustomSize();const i=+t.dataset.i,j=+t.dataset.mix,r=S.rows[i];r.mix=Array.isArray(r.mix)?r.mix:[];while(r.mix.length<=j)r.mix.push({s:'',n:''});r.mix[j].s=x||r.mix[j].s||'';save();renderRows();upd();return}applyMixField(t);upd();return}if(t.value==='__new'){const i=+t.dataset.i;if(t.dataset.k==='s'){const x=addCustomSize();S.rows[i].s=x||S.rows[i].s;save();renderRows();upd();return}if(t.dataset.k==='b'){const x=(prompt('اسم الكرتون الجديد:')||'').trim();if(x&&!isMaggiName(x)&&!BR().includes(x)){XL.brand.push(x);saveXL()}S.rows[i].b=(x&&!isMaggiName(x)?x:S.rows[i].b)}else{const x=(prompt('اسم نوع الكرتون الجديد (مثال: مقفول 10 ك):')||'').trim();if(x&&!isMaggiName(x)&&!CT().includes(x)){XL.carton.push(x);saveXL()}S.rows[i].c=(x&&!isMaggiName(x)?x:S.rows[i].c)}save();renderRows();upd();return}const r=S.rows[t.dataset.i];r[t.dataset.k]=t.value;
+document.addEventListener('change',e=>{const t=e.target;if(t.dataset.i===undefined)return;if(t.dataset.mk){if(t.value==='__new'&&t.dataset.mk==='s'){const x=addCustomSize();const i=+t.dataset.i,j=+t.dataset.mix,r=S.rows[i];r.mix=Array.isArray(r.mix)?r.mix:[];while(r.mix.length<=j)r.mix.push({s:'',n:''});r.mix[j].s=x||r.mix[j].s||'';save();renderRows();upd();return}applyMixField(t);upd();return}if(t.value==='__new'){const i=+t.dataset.i;if(t.dataset.k==='s'){const x=addCustomSize();S.rows[i].s=x||S.rows[i].s;save();renderRows();upd();return}if(t.dataset.k==='b'){const x=(prompt('اسم الكرتون الجديد:')||'').trim();if(x&&!isMaggiName(x)&&!BR().includes(x)){XL.brand.push(x);saveXL()}S.rows[i].b=(x&&!isMaggiName(x)?x:S.rows[i].b)}else{const x=(prompt('اسم نوع الكرتون الجديد (مثال: مقفول 10 ك):')||'').trim();if(x&&!isMaggiName(x)&&!CT().includes(x)){XL.carton.push(x);saveXL()}S.rows[i].c=(x&&!isMaggiName(x)?x:S.rows[i].c)}save();renderRows();upd();return}const r=S.rows[t.dataset.i];
+ if((t.dataset.k==='v'||t.dataset.k==='c'||t.dataset.k==='pk')&&!guardChange(r,t.dataset.k,t.value)){t.value=r[t.dataset.k]||'';return}
+ r[t.dataset.k]=t.value;
+ if(t.dataset.k==='v'||t.dataset.k==='pk'){const g=GOF(r.v);if(t.dataset.k==='v'&&g==='mand'&&!r.pk)r.pk='صندوق بلاستيك';if(t.dataset.k==='v'&&g==='lemon'&&!r.pk)r.pk='كرتون';save();renderRows();upd();return}
+ if(t.dataset.k==='c'){const w=wOf(t.value);if(w)r.w=w;save();renderRows();upd();return}
  if(t.dataset.k==='s'){if(t.value==='MIX'&&(!Array.isArray(r.mix)||r.mix.length<2))r.mix=[{s:'',n:''},{s:'',n:''}];save();renderRows();upd();return}
  if(t.dataset.k==='c'){const w=wOf(t.value);if(w){r.w=w;const el=document.querySelector(`[data-i="${t.dataset.i}"][data-k="w"]`);if(el)el.value=w}}upd()});
 document.addEventListener('click',e=>{const t=e.target.closest('.mixadd,.mixrm');if(!t)return;const i=+t.dataset.i,r=S.rows[i];r.mix=Array.isArray(r.mix)?r.mix:[];if(t.classList.contains('mixadd'))r.mix.push({s:'',n:''});else{const j=+t.dataset.mix;if(r.mix.length<=2)r.mix[j]={s:'',n:''};else r.mix.splice(j,1);if(mixLines(r).length)r.n=String(mixSum(r))}save();renderRows();upd()});
+/* تغيير الصنف/الكرتون: لو المقاس المختار مش من مقاسات الاختيار الجديد ← تحذير قبل أي مسح (عدد الكراتين والوزن مش بيتمسحوا) */
+function guardChange(r,k,val){if(!window.ALS||(k!=='v'&&!val))return true;const nr=Object.assign({},r,{[k]:val});const g=GOF(nr.v);const lost=[];const clr={};
+ if(k==='v'&&r.c&&g&&!ALS.packOf(g,r.c,'')&&!XL.carton.includes(r.c)){lost.push('نوع الكرتون «'+r.c+'»');clr.c=1;nr.c=''}
+ const L2=ALS.sizesFor(g,ALS.packOf(g,nr.c,nr.pk));const okS=s=>!s||!g||L2===null&&/^\d+$/.test(s)||(L2&&L2.includes(s))||(XL.size||[]).includes(s);
+ if(r.s&&r.s!=='MIX'&&!okS(r.s)){lost.push('المقاس «'+r.s+'»');clr.s=1}
+ const badMix=(Array.isArray(r.mix)&&r.s==='MIX')?r.mix.filter(x=>x&&x.s&&!okS(x.s)):[];if(badMix.length){lost.push('مقاسات MIX: '+badMix.map(x=>x.s).join('، '));clr.mix=1}
+ if(!lost.length)return true;
+ if(!confirm('تنبيه: '+lost.join(' و ')+' مش من اختيارات '+(k==='v'?'الصنف «'+val+'»':'العبوة «'+val+'»')+'.\nلو كمّلت هيتشال من الباليت ده وتختاره تاني من القائمة الجديدة. عدد الكراتين والوزن مش هيتمسحوا.\n\nتكمل؟'))return false;
+ if(clr.c)r.c='';if(clr.s)r.s='';if(clr.mix)r.mix.forEach(x=>{if(x&&x.s&&!okS(x.s))x.s=''});return true}
 const filled=r=>F.some(k=>r[k]);
 function analyse(){
  const cnt={};S.rows.forEach(r=>{if(r.p)cnt[r.p]=(cnt[r.p]||0)+1});
@@ -163,6 +188,7 @@ function upd(){
   row.querySelectorAll('[data-mk]').forEach(el=>el.classList.toggle('miss',!!o.mixBad));
   const sumEl=$('mixsum'+i);if(sumEl){const lines=mixLines(S.rows[i]);const sum=lines.reduce((a,x)=>a+x.n,0);sumEl.textContent=lines.length?('مجموع تفصيل المقاسات: '+sum+' كرتونة'):'اختر كل مقاس وعدّ الكراتين الخاصة به'}
   row.classList.toggle('dup',!!o.dup);
+  const zi=$('szi'+i);if(zi){const h=szInfoHTML(S.rows[i]);if(zi.innerHTML!==h)zi.innerHTML=h}
   const otherMiss=(o.miss||[]).filter(k=>!(k==='s'&&S.rows[i].s==='MIX'));
   $('m'+i).textContent=o.bad?'رقم غير صحيح — لازم يبدأ بـ P وفيه أرقام (لحد 12 حرف)':o.dup?'رقم مكرر!':(otherMiss.length?'بيانات ناقصة':(o.mixBad||''));
   $('run'+i).textContent=o.kg?(Math.round(o.kg*10)/10+' كجم'):''});
@@ -178,7 +204,7 @@ function upd(){
 const r1=x=>Math.round(x*10)/10;
 function sumKeys(A){return Object.keys(A.sum).sort((a,b)=>A.sum[a].v.localeCompare(A.sum[b].v,'ar')||(sizeSortKey(A.sum[a].s)-sizeSortKey(A.sum[b].s))||String(A.sum[a].s).localeCompare(String(A.sum[b].s),'ar')||A.sum[a].c.localeCompare(A.sum[b].c,'ar'))}
 function sumTable(A){const ks=sumKeys(A);if(!ks.length)return '<div class="hint">لسه مفيش بيانات</div>';
- return `<table class="sum"><tr><th>الصنف</th><th>المقاس</th><th>نوع الكرتون</th><th>باليتات</th><th>كراتين</th><th>وزن كجم</th></tr>${ks.map(k=>`<tr><td>${esc(A.sum[k].v)}</td><td>${esc(A.sum[k].s)}</td><td>${esc(A.sum[k].c)}</td><td>${A.sum[k].p}</td><td>${A.sum[k].n}</td><td>${r1(A.sum[k].kg)}</td></tr>`).join('')}<tr><th colspan="3">الإجمالي</th><th>${ks.reduce((a,k)=>a+A.sum[k].p,0)}</th><th>${ks.reduce((a,k)=>a+A.sum[k].n,0)}</th><th>${r1(ks.reduce((a,k)=>a+A.sum[k].kg,0))}</th></tr></table>`}
+ return `<table class="sum"><tr><th>الصنف</th><th>المقاس</th><th>نوع الكرتون</th><th>باليتات</th><th>كراتين</th><th>وزن كجم</th></tr>${ks.map(k=>`<tr><td>${esc(A.sum[k].v)}</td><td>${esc(A.sum[k].s)}${(()=>{const t=szInfo({v:A.sum[k].v,c:A.sum[k].c,pk:''},A.sum[k].s);return t?`<small class="szd">${esc(t)}</small>`:''})()}</td><td>${esc(A.sum[k].c)}</td><td>${A.sum[k].p}</td><td>${A.sum[k].n}</td><td>${r1(A.sum[k].kg)}</td></tr>`).join('')}<tr><th colspan="3">الإجمالي</th><th>${ks.reduce((a,k)=>a+A.sum[k].p,0)}</th><th>${ks.reduce((a,k)=>a+A.sum[k].n,0)}</th><th>${r1(ks.reduce((a,k)=>a+A.sum[k].kg,0))}</th></tr></table>`}
 $('addRow').onclick=()=>{S.rows.push(er());renderRows();upd();const i=S.rows.length-1;$('r'+i).scrollIntoView({behavior:'smooth'});$('r'+i).querySelector('input').focus()};
 $('bNew').onclick=()=>{if(confirm('هتبدأ يوم جديد وهتمسح بيانات اليوم الحالي. اتأكد إنك بعت الملف الأول. متأكد؟')){S=blank(S.h.eng,S.h.exp);delete S.h.code;save();initHeader();renderRows();upd();scrollTo(0,0)}};
 function reportDay(){return S.h.date||new Date().toISOString().slice(0,10)}
