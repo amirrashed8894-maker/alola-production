@@ -97,7 +97,13 @@ const MAXDEF=10,KEY='alola_production_v1',F=['p','v','s','pk','c','b','g','loc',
 const NAMES={p:'رقم الباليت',v:'الصنف',s:'المقاس',pk:'نوع التعبئة',c:'نوع الكرتون',b:'اسم الكرتون',g:'الدرجة',loc:'مكان التخزين',n:'عدد الكراتين',w:'وزن الكرتونة (كجم)',note:'ملاحظات'};
 const er=()=>Object.fromEntries(F.map(k=>[k,'']));
 let S=load();
-function blank(eng,exp){return {h:{date:new Date().toISOString().slice(0,10),eng:eng||'',exp:exp||'العلا'},rows:Array.from({length:MAXDEF},er)}}
+function ptoast(t){let el=document.getElementById('ptoast');if(!el){el=document.createElement('div');el.id='ptoast';el.style.cssText='position:fixed;left:50%;bottom:24px;transform:translateX(-50%);background:#0f172a;color:#fff;padding:10px 16px;border-radius:10px;font-size:14px;z-index:9999;max-width:90vw;text-align:center';document.body.appendChild(el)}el.textContent=t;el.style.display='block';clearTimeout(ptoast.t);ptoast.t=setTimeout(()=>el.style.display='none',3000)}
+function cairoDay(){return new Date().toLocaleDateString('en-CA',{timeZone:'Africa/Cairo'})}
+/* v21: كود التقرير جواه تاريخ الإنتاج نفسه — PR-YYYYMMDD-HHMM-XXXX، ويتعمل من جديد لو التاريخ اتغير */
+function prCode(date){const d=new Date(),p=x=>String(x).padStart(2,'0');return 'PR-'+String(date||cairoDay()).replace(/-/g,'')+'-'+p(d.getHours())+p(d.getMinutes())+'-'+Math.random().toString(36).slice(2,6).toUpperCase()}
+function codeDay(c){const m=String(c||'').match(/^PR-(\d{8})-/);return m?m[1]:''}
+function syncCode(){if(!S.h.code||!S.h.date)return false;if(codeDay(S.h.code)===S.h.date.replace(/-/g,''))return false;S.h.code=prCode(S.h.date);save();return true}
+function blank(eng,exp){return {h:{date:cairoDay(),eng:eng||'',exp:exp||'العلا'},rows:Array.from({length:MAXDEF},er)}}
 function load(){try{const x=JSON.parse(localStorage.getItem(KEY));if(x&&x.rows)return x}catch(e){}return blank()}
 function save(){try{localStorage.setItem(KEY,JSON.stringify(S))}catch(e){}}
 const $=id=>document.getElementById(id);
@@ -127,7 +133,7 @@ function sizeSortKey(s){if(String(s).startsWith('MIX'))return 10000;const n=pars
 const numOrText=v=>v===''||v==null?'':(isNaN(Number(v))?v:Number(v));
 function sizeExport(r){return r&&r.s==='MIX'?sizeLabel(r):numOrText(r&&r.s)}
 function initExp(){const el=$('exp');if(!S.h.exp)S.h.exp='العلا';const list=EXL().filter(x=>!isMaggiName(x));const kept=isMaggiName(S.h.exp);el.innerHTML=list.map(x=>`<option${!kept&&x===S.h.exp?' selected':''}>${esc(x)}</option>`).join('')+(kept?'<option value="__kept" selected>مصدر محفوظ</option>':(list.includes(S.h.exp)?'':`<option selected>${esc(S.h.exp)}</option>`))+'<option value="__new">+ مُصدر جديد…</option>';el.onchange=()=>{if(el.value==='__kept')return;if(el.value==='__new'){const x=(prompt('اسم المُصدر الجديد:')||'').trim();if(x&&!isMaggiName(x)){if(!EXL().includes(x)){XL.exporter.push(x);saveXL()}S.h.exp=x}else if(x&&isMaggiName(x)){alert('الاسم ده غير متاح')}initExp();save();upd();return}S.h.exp=el.value;save();upd()}}
-function initHeader(){initExp();if(!S.h.shift)S.h.shift='صباحي';['date','eng','shift'].forEach(k=>{const el=$(k);el.value=S.h[k]||'';el.oninput=el.onchange=()=>{S.h[k]=el.value;upd()}})}
+function initHeader(){initExp();if(!S.h.shift)S.h.shift='صباحي';['date','eng','shift'].forEach(k=>{const el=$(k);el.value=S.h[k]||'';el.oninput=el.onchange=()=>{S.h[k]=el.value;if(k==='date'&&syncCode())ptoast('اتغير تاريخ الإنتاج ← كود تقرير جديد '+S.h.code);upd()}})}
 function sel(i,k,list,r){return `<div><div class="sl">${NAMES[k]}</div><select data-i="${i}" data-k="${k}">${opts(list,r[k],'— اختار —')}</select></div>`}
 function sizeSelect(i,r){const g=GOF(r.v),list=rowSizes(r);const info=`<div class="szi" id="szi${i}">${szInfoHTML(r)}</div>`;
  if(!r.v)return `<div><div class="sl">${NAMES.s}</div><select data-i="${i}" data-k="s" disabled>${r.s?opts([],r.s==='MIX'?'MIX':r.s,''):'<option>اختار الصنف الأول</option>'}</select>${info}</div>`;
@@ -213,9 +219,12 @@ function fname(ext){return reportTitle()+'.'+ext}
 const used=()=>S.rows.map((r,i)=>({...r,i:i+1})).filter(filled);
 const COLS=['م','رقم الباليت','الصنف','المقاس','نوع التعبئة','نوع الكرتون','اسم الكرتون','الدرجة','مكان التخزين','عدد الكراتين','وزن الكرتونة (كجم)','ملاحظات'];
 /* ---------- PDF v9 ---------- */
-function repData(){if(!S.h.code){const d=new Date(),p=x=>String(x).padStart(2,'0');S.h.code='PR-'+(S.h.date||'').replace(/-/g,'')+'-'+p(d.getHours())+p(d.getMinutes())+'-'+Math.random().toString(36).slice(2,6).toUpperCase();save()}
+function repData(){if(!S.h.code){S.h.code=prCode(S.h.date);save()}else syncCode();
  const d=new Date();const A=analyse(),N=v=>v===''||v==null?'':(isNaN(Number(v))?v:Number(v));const aoa=[['الإنتاج اليومي — شركة العلا لفرز الحاصلات الزراعية'],[],['تاريخ الإنتاج',S.h.date],['مهندس التشغيل',S.h.eng],['المُصدر',expDisplay(S.h.exp)],['الوردية',S.h.shift||''],['كود التقرير',S.h.code],['عدد الباليتات',A.pal],['إجمالي الكراتين',A.run],['إجمالي الوزن كجم',A.kg],[],COLS,...used().map(x=>[x.i,x.p,x.v,sizeExport(x),x.pk,x.c,x.b,x.g,x.loc,N(x.n),N(x.w),x.note])];return {aoa,code:S.h.code,date:S.h.date,shift:S.h.shift,eng:S.h.eng,exp:expDisplay(S.h.exp),at:d.toTimeString().slice(0,5),rows:used().filter(r=>r.p||r.v||r.n)}}
-$('bPrint').onclick=async()=>{const d=repData();if(!d.rows.length)return alert('مفيش باليتات مسجلة');$('busy').style.display='flex';
+function readyPdf(){const A=analyse();const e=[];if(!S.h.date)e.push('تاريخ الإنتاج ناقص');if(A.bad)e.push(A.bad+' رقم باليت غير صحيح');if(A.dups)e.push(A.dups+' سطر برقم باليت مكرر');
+ if(e.length){alert('مينفعش نطلع التقرير قبل تصليح:\n\n• '+e.join('\n• ')+'\n\n(برنامج المحطة بيرفض الملف كله لو فيه باليت غلط أو مكرر)');return false}
+ if(A.miss&&!confirm('فيه '+A.miss+' سطر بيانات ناقصة (باللون الأحمر). تطلع التقرير كده؟'))return false;return true}
+$('bPrint').onclick=async()=>{if(!readyPdf())return;const d=repData();if(!d.rows.length)return alert('مفيش باليتات مسجلة');$('busy').style.display='flex';
  try{const blob=await PR.pdf(d);const title=reportTitle(d.date);const name=title+'.pdf';const f=new File([blob],name,{type:'application/pdf'});$('busy').style.display='none';
   if(navigator.canShare&&navigator.canShare({files:[f]})){try{await navigator.share({files:[f],title,text:title});return}catch(e){if(e.name==='AbortError')return}}
   download(blob,name)}catch(e){$('busy').style.display='none';alert('حصلت مشكلة: '+e.message)}};
