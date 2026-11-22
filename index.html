@@ -95,7 +95,7 @@ table.sum th{background:var(--g);color:#fff}
  <button class="btn3" id="bNew">يوم جديد</button>
 </div>
 <div id="busy">جاري عمل التقرير PDF…</div>
-<script src="html2canvas.min.js"></script><script src="jspdf.umd.min.js"></script><script src="sizes.js?v=2"></script><script src="prod-report.js?v=20"></script><script src="pdf-share.js?v=1"></script>
+<script src="html2canvas.min.js"></script><script src="jspdf.umd.min.js"></script><script src="sizes.js?v=2"></script><script src="prod-report.js?v=20"></script><script src="pdf-share.js?v=2"></script>
 <script>
 if(/iPad|iPhone|iPod/.test(navigator.userAgent)||(navigator.platform==='MacIntel'&&navigator.maxTouchPoints>1)||(/Safari/.test(navigator.userAgent)&&!/Chrome|Chromium|CriOS|Android/.test(navigator.userAgent)))document.documentElement.classList.add('ios');
 
@@ -255,7 +255,9 @@ $('addLeft').onclick=()=>{if(!Array.isArray(S.left))S.left=[];const last=S.left[
 $('addRow').onclick=()=>{S.rows.push(er());renderRows();upd();const i=S.rows.length-1;$('r'+i).scrollIntoView({behavior:'smooth'});$('r'+i).querySelector('input').focus()};
 $('bNew').onclick=()=>{if(confirm('هتبدأ يوم جديد وهتمسح بيانات اليوم الحالي. اتأكد إنك بعت الملف الأول. متأكد؟')){S=blank(S.h.eng,S.h.exp);delete S.h.code;save();initHeader();renderRows();renderLeft();upd();scrollTo(0,0)}};
 function reportDay(){return S.h.date||new Date().toISOString().slice(0,10)}
-function reportTitle(date){const d=String(date??'').trim()||reportDay();return 'تشغيل العلا يوم '+d}
+/* v36: اسم الملف «انتاج العلا YYYY-MM-DD» (NFC) — نفس الاسم للـ PDF والإكسل وعنوان المشاركة */
+function reportTitle(date){const d=String(date??'').trim()||reportDay();return ('انتاج العلا '+d).normalize('NFC')}
+function asciiTitle(date){const d=String(date??'').trim()||reportDay();return 'Alola-Production-'+d.replace(/[^0-9A-Za-z-]+/g,'-')}
 function fname(ext){return reportTitle()+'.'+ext}
 const used=()=>S.rows.map((r,i)=>({...r,i:i+1})).filter(filled);
 const COLS=['م','رقم الباليت','الصنف','المقاس','نوع التعبئة','نوع الكرتون','اسم الكرتون','الدرجة','مكان التخزين','عدد الكراتين','وزن الكرتونة (كجم)','ملاحظات'];
@@ -266,9 +268,9 @@ function readyPdf(){const A=analyse();const e=[];if(!S.h.date)e.push('تاريخ
  if(e.length){alert('مينفعش نطلع التقرير قبل تصليح:\n\n• '+e.join('\n• ')+'\n\n(برنامج المحطة بيرفض الملف كله لو فيه باليت غلط أو مكرر)');return false}
  if(A.miss&&!confirm('فيه '+A.miss+' سطر بيانات ناقصة (باللون الأحمر). تطلع التقرير كده؟'))return false;if(LA.miss&&!LA.hard&&!confirm('فيه '+LA.miss+' سطر نواقص بيانات ناقصة (نوع الكرتون). تطلع التقرير كده؟'))return false;return true}
 $('bPrint').onclick=async()=>{if(!readyPdf())return;const d=repData();if(!d.rows.length&&!d.left.length)return alert('مفيش باليتات ولا نواقص مسجلة');$('busy').style.display='flex';
- try{const blob=await PR.pdf(d);const title=reportTitle(d.date);const name=title+(d.code?' — '+d.code:'')+'.pdf';$('busy').style.display='none';
+ try{const blob=await PR.pdf(d);const title=reportTitle(d.date);const name=title+'.pdf';$('busy').style.display='none';
   /* v23: معاينة داخل البرنامج ثم «إرسال واتساب» (الملف نفسه) — مفيش حفظ/تحميل تلقائي */
-  PdfShare.open(blob,name,{title})}catch(e){$('busy').style.display='none';alert('حصلت مشكلة: '+e.message)}};
+  PdfShare.open(blob,name,{title,fallbackName:asciiTitle(d.date)+'.pdf'})}catch(e){$('busy').style.display='none';alert('حصلت مشكلة: '+e.message)}};
 const crcT=(()=>{const t=new Uint32Array(256);for(let n=0;n<256;n++){let c=n;for(let k=0;k<8;k++)c=c&1?0xEDB88320^(c>>>1):c>>>1;t[n]=c}return t})();
 function crc(b){let c=~0;for(let i=0;i<b.length;i++)c=crcT[(c^b[i])&255]^(c>>>8);return ~c>>>0}
 function zip(files){const enc=new TextEncoder(),parts=[],cen=[];let off=0;
@@ -310,11 +312,11 @@ function csv(){const A=analyse();const q=v=>'"'+String(v??'').replace(/"/g,'""')
  o.push(COLS.map(q).join(','));used().forEach(x=>o.push([x.i,x.p,x.v,sizeLabel(x),x.pk,x.c,x.b,x.g,x.loc,x.n,x.w,x.note].map(q).join(',')));
  return new Blob(['\ufeff'+o.join('\r\n')],{type:'text/csv;charset=utf-8'})}
 $('bShare').onclick=async()=>{
- const f=new File([makeXlsx()],fname('xlsx'),{type:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'});
- const title=reportTitle();
- if(navigator.canShare&&navigator.canShare({files:[f]})){try{await navigator.share({files:[f],title,text:title});return}catch(e){if(e.name==='AbortError')return}}
- const c=new File([csv()],fname('csv'),{type:'text/csv'});
- if(navigator.canShare&&navigator.canShare({files:[c]})){try{await navigator.share({files:[c],title,text:title});return}catch(e){if(e.name==='AbortError')return}}
+ const ios=document.documentElement.classList.contains('ios');const title=reportTitle();const data=fl=>ios?{files:fl}:{files:fl,title,text:title};
+ const can=fl=>{try{return !!(navigator.canShare&&navigator.canShare({files:fl}))}catch(e){return false}};
+ const X='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet';
+ const tries=[new File([makeXlsx()],fname('xlsx'),{type:X}),new File([makeXlsx()],asciiTitle()+'.xlsx',{type:X}),new File([csv()],fname('csv'),{type:'text/csv'})];
+ for(const f of tries){if(!can([f]))continue;try{await navigator.share(data([f]));return}catch(e){if(e.name==='AbortError')return;break}}
  download(csv(),fname('csv'));alert('المشاركة المباشرة مش مدعومة هنا — اتحفظ ملف CSV. للـ PDF استخدم زرار "PDF / واتساب".');
 };
 if(location.hash==='#demo'){S=blank();S.h.eng='م. أحمد';

@@ -30,6 +30,9 @@ var css='.psx{position:fixed;top:0;left:0;right:0;bottom:0;width:100%;height:100
 '.psx-card p{white-space:pre-line;line-height:1.7;margin:0 0 14px;font-size:15px}.psx-card .psx-row{flex-wrap:wrap}';
 function addCss(){if(document.getElementById('psx-css'))return;var s=document.createElement('style');s.id='psx-css';s.textContent=css;document.head.appendChild(s)}
 function el(tag,cls,txt){var e=document.createElement(tag);if(cls)e.className=cls;if(txt!=null)e.textContent=txt;return e}
+/* v2: الاسم العربي يفضل زي ما هو (NFC) — بنشيل بس الحروف الممنوعة في أسماء الملفات وعلامات الاتجاه المخفية */
+function cleanName(n){n=String(n||'');try{n=n.normalize('NFC')}catch(e){}return n.replace(/[\u0000-\u001F\u007F\u200E\u200F\u202A-\u202E\u2066-\u2069\uFEFF]/g,'').replace(/[\\\/:*?"<>|]+/g,'-').replace(/\s+/g,' ').trim()}
+var IOS=/iPad|iPhone|iPod/.test(navigator.userAgent)||(navigator.platform==='MacIntel'&&navigator.maxTouchPoints>1);
 function canFiles(file){try{return !!(navigator.canShare&&navigator.share&&navigator.canShare({files:[file]}))}catch(e){return false}}
 function loadLib(){if(lib)return Promise.resolve(lib);if(libP)return libP;
  libP=new Promise(function(res,rej){if(window.pdfjsLib){lib=window.pdfjsLib;try{if(!lib.GlobalWorkerOptions.workerSrc)lib.GlobalWorkerOptions.workerSrc=base+'pdfjs/pdf.worker.min.js?v=3.11.174'}catch(e){}return res(lib)}
@@ -47,9 +50,12 @@ function share(){/* MUST stay synchronous up to navigator.share (iOS user-gestur
  if(!st)return;var f=st.file;var all=[f].concat(st.extra||[]);var files=null;
  try{if(all.length>1&&navigator.canShare&&navigator.canShare({files:all}))files=all}catch(e){}
  if(!files&&canFiles(f))files=[f];
- if(files){log('share',{name:f.name,type:f.type,size:f.size,n:files.length,names:files.map(function(x){return x.name})});var o={files:files};if(st.title)o.title=st.title;
+ if(!files&&st.fbFile&&canFiles(st.fbFile)){f=st.fbFile;files=[f];log('fallbackName',f.name)}
+ if(files){log('share',{name:f.name,type:f.type,size:f.size,n:files.length,names:files.map(function(x){return x.name})});var o={files:files};if(st.title&&!IOS)o.title=st.title;/* iOS: الملف لوحده — العنوان بيخلي واتساب يسمّي الملف بيه ويبوّظ العربي */
   var p;try{p=navigator.share(o)}catch(e){p=Promise.reject(e)}
-  p.then(function(){log('shared',f.name)},function(e){if(e&&e.name==='AbortError')return;log('shareErr',String(e&&e.name||e));dialog(T.fail,[{t:'تمام'}])});return}
+  p.then(function(){log('shared',f.name)},function(e){if(e&&e.name==='AbortError')return;log('shareErr',String(e&&e.name||e));
+   var fbf=st&&st.fbFile;if(fbf&&f!==fbf&&e&&(e.name==='TypeError'||e.name==='DataError')&&canFiles(fbf)){dialog(T.fail,[{t:'حاول تاني',cls:'psx-wa',fn:function(){log('retryFallback',fbf.name);var q;try{q=navigator.share({files:[fbf]})}catch(x){q=Promise.reject(x)}q.then(function(){log('shared',fbf.name)},function(x){if(x&&x.name!=='AbortError')log('shareErr',String(x&&x.name||x))})}},{t:'إغلاق'}]);return}
+   dialog(T.fail,[{t:'تمام'}])});return}
  log('noShare',f.name);
  dialog(T.noShare,[{t:'⬇ تحميل الملف',cls:'psx-sec',keep:true,fn:dlAll},{t:'فتح واتساب ويب',cls:'psx-wa',keep:true,fn:function(){window.open('https://web.whatsapp.com/','_blank','noopener')}},{t:'إغلاق'}])}
 function close(fromPop){if(!st)return;var s=st;st=null;try{s.task&&s.task.destroy&&s.task.destroy()}catch(e){}if(s.url)URL.revokeObjectURL(s.url);s.root.remove();document.documentElement.style.overflow=s.ov||'';
@@ -66,8 +72,9 @@ function draw(){var s=st;if(!s||!s.doc)return;var body=s.body;body.innerHTML='';
   return pg.render({canvasContext:c.getContext('2d'),viewport:vp}).promise})})})(i);
  return chain.then(function(){if(s===st){s.mode='pdfjs';log('view','pdfjs:'+s.doc.numPages)}})}
 function open(blob,name,opt){opt=opt||{};if(st)close(true);if(!(blob instanceof Blob))throw new Error('PdfShare: no PDF');addCss();
- if(blob.type!=='application/pdf')blob=new Blob([blob],{type:'application/pdf'});name=String(name||'تقرير.pdf');if(!/\.pdf$/i.test(name))name+='.pdf';name=name.replace(/[\\\/:*?"<>|]+/g,'-');
+ if(blob.type!=='application/pdf')blob=new Blob([blob],{type:'application/pdf'});name=cleanName(name||'تقرير.pdf');if(!/\.pdf$/i.test(name))name+='.pdf';
  var file=new File([blob],name,{type:'application/pdf',lastModified:Date.now()});
+ var fb=opt.fallbackName?cleanName(opt.fallbackName).replace(/[^\x20-\x7E]+/g,'-'):'';if(fb&&!/\.pdf$/i.test(fb))fb+='.pdf';var fbFile=fb&&fb!==name?new File([blob],fb,{type:'application/pdf',lastModified:Date.now()}):null;
  var root=el('div','psx');root.setAttribute('role','dialog');root.setAttribute('aria-label',T.title);
  var top=el('div','psx-top');var x=el('button','psx-x','✕ '+T.back);x.type='button';top.appendChild(el('b',null,opt.heading||T.title));var nm=el('span','psx-nm',name);top.appendChild(nm);
  var zo=el('button','psx-z','−'),zi=el('button','psx-z','+');zo.type=zi.type='button';zo.setAttribute('aria-label','تصغير');zi.setAttribute('aria-label','تكبير');top.appendChild(zo);top.appendChild(zi);top.appendChild(x);
@@ -76,7 +83,7 @@ function open(blob,name,opt){opt=opt||{};if(st)close(true);if(!(blob instanceof 
  var r=el('div','psx-row');var bw=el('button','psx-btn psx-wa','🟢 '+T.send),bd=el('button','psx-btn psx-sec','⬇ '+T.dl),bb=el('button','psx-btn psx-sec',T.back);
  bw.type=bd.type=bb.type='button';bw.id='psxSend';bd.id='psxDownload';bb.id='psxBack';bw.style.flex='2';r.appendChild(bw);r.appendChild(bd);r.appendChild(bb);bar.appendChild(hint);bar.appendChild(r);
  root.appendChild(top);root.appendChild(body);root.appendChild(bar);document.body.appendChild(root);
- st={extra:(opt.extra||[]).filter(function(x){return x instanceof File}),root:root,body:body,blob:blob,file:file,name:name,title:opt.title||name.replace(/\.pdf$/i,''),zoom:1,cnt:cnt,ov:document.documentElement.style.overflow,onClose:opt.onClose};
+ st={fbFile:fbFile,extra:(opt.extra||[]).filter(function(x){return x instanceof File}),root:root,body:body,blob:blob,file:file,name:name,title:opt.title||name.replace(/\.pdf$/i,''),zoom:1,cnt:cnt,ov:document.documentElement.style.overflow,onClose:opt.onClose};
  document.documentElement.style.overflow='hidden';
  bw.addEventListener('click',share);bd.addEventListener('click',dlAll);bb.addEventListener('click',function(){close()});x.addEventListener('click',function(){close()});
  zi.addEventListener('click',function(){if(st&&st.doc&&st.zoom<3){st.zoom=Math.min(3,st.zoom*1.4);draw()}});zo.addEventListener('click',function(){if(st&&st.doc&&st.zoom>0.6){st.zoom=Math.max(0.6,st.zoom/1.4);draw()}});
