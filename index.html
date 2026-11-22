@@ -17,7 +17,7 @@ body{margin:0;font-family:"Segoe UI",Tahoma,"Noto Sans Arabic",Arial,sans-serif;
 header.bar{position:sticky;top:0;z-index:5;background:var(--g);color:#fff;padding:10px 14px;padding-top:max(10px,env(safe-area-inset-top));display:flex;align-items:center;justify-content:space-between;gap:8px}
 header.bar h1{font-size:19px;margin:0}
 .stat{font-size:13px;opacity:.95;text-align:left;line-height:1.35}
-main{padding:12px;max-width:900px;margin:auto;padding-bottom:110px}
+main{padding:12px;max-width:900px;margin:auto;padding-bottom:150px}
 .card{background:#fff;border-radius:14px;padding:12px;margin-bottom:12px;box-shadow:0 1px 3px #0002}
 .card h2{font-size:16px;margin:0 0 10px;color:var(--g)}
 label{display:block;font-size:13px;color:#555;margin:8px 0 4px}
@@ -324,16 +324,62 @@ if('serviceWorker' in navigator&&(location.protocol==='https:'||location.hostnam
 </script>
 <script src="pallet-pool.js?v=2"></script>
 <script>
-// ===== No-data-loss autosave: every change -> localStorage + IndexedDB mirror; restored after sleep/kill/restart =====
-(function(){let db=null;const ind=document.createElement('div');ind.className='noprint';ind.style.cssText='position:fixed;bottom:6px;left:8px;font-size:11px;background:#1d4d2b;color:#dfffd6;padding:2px 8px;border-radius:8px;z-index:99;opacity:.9';document.body.appendChild(ind);
- const put=v=>{if(!db)return;try{const t=db.transaction('kv','readwrite');t.objectStore('kv').put(v,'S');t.oncomplete=()=>{ind.textContent='✓ تم الحفظ تلقائياً '+new Date().toTimeString().slice(0,8)}}catch(e){}};
- const _save=save;save=function(){S._ts=Date.now();_save();put(JSON.stringify(S));ind.textContent='✓ تم الحفظ تلقائياً '+new Date().toTimeString().slice(0,8)};
- const hasData=x=>x&&x.rows&&x.rows.some(r=>r.p||r.v||r.n);
- document.addEventListener('input',()=>setTimeout(save,0));document.addEventListener('change',()=>setTimeout(save,0));
- document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='hidden')save()});window.addEventListener('pagehide',()=>save());
- const op=indexedDB.open('alola-production-draft',1);op.onupgradeneeded=()=>op.result.createObjectStore('kv');
- op.onsuccess=()=>{db=op.result;const r=db.transaction('kv').objectStore('kv').get('S');r.onsuccess=()=>{let ls=null;try{ls=JSON.parse(localStorage.getItem(KEY))}catch(e){}
-  const v=r.result?JSON.parse(r.result):null;const best=[S,ls,v].filter(x=>x&&x.rows&&hasData(x)).sort((a,b)=>(b._ts||0)-(a._ts||0))[0];if(best&&best!==S){S=best;try{localStorage.setItem(KEY,JSON.stringify(S))}catch(e){};initHeader();renderRows();upd()}if(hasData(S))put(JSON.stringify(S));
-  if(hasData(S)){const b=document.createElement('div');b.id='draftBanner';b.className='noprint';b.style.cssText='background:#fffbea;border:1px solid #f1d38a;border-radius:9px;padding:8px;margin:8px;font-size:13px';b.innerHTML='📝 <b>مسودة غير مكتملة</b> — بيانات تقرير الإنتاج اتسترجعت تلقائياً (آخر حفظ '+new Date(S._ts||Date.now()).toTimeString().slice(0,5)+'). كمّل من مكان ما وقفت.';document.body.insertBefore(b,document.body.children[1]||null);setTimeout(()=>b.remove(),15000)}}};
- if(navigator.storage&&navigator.storage.persist)navigator.storage.persist().catch(()=>{})})();
+// ===== v34 autosave: every change saved at once on the phone (localStorage + IndexedDB, per day), restored after kill/reload/background/offline; days kept apart =====
+(function(){
+ const DBN='alola-production-draft',DK='alola_production_days',KEEP_DAYS=60;let db=null,dbP=null,lsOk=true,idbOk=null,lastAt=0,dt=null;
+ const hasData=x=>!!(x&&((x.rows||[]).some(r=>r&&(r.p||r.v||r.n||(Array.isArray(r.mix)&&r.mix.some(m=>m&&(m.s||m.n)))))||(x.left||[]).some(r=>r&&(r.v||r.n||r.s))));
+ const nid=()=>'d'+Date.now().toString(36)+Math.random().toString(36).slice(2,6);
+ const hm=t=>{const d=new Date(t);return String(d.getHours()).padStart(2,'0')+':'+String(d.getMinutes()).padStart(2,'0')};
+ // indicator: a slim line on top of the bottom buttons
+ const bar=document.createElement('div');bar.id='svbar';bar.className='noprint';bar.style.cssText='grid-column:1/-1;display:flex;justify-content:space-between;align-items:center;gap:8px;font-size:12px;line-height:1.2;margin:-2px 2px 0';
+ bar.innerHTML='<span id="svd" style="color:#1d6b35;font-weight:600"></span><button id="bDays" type="button" style="font-size:12px;padding:3px 8px;border-radius:8px;border:1px solid #cbd5e1;background:#f8fafc;color:#0f172a;display:none">📂 الأيام المحفوظة</button>';
+ const act=document.querySelector('.actions');if(act)act.insertBefore(bar,act.firstChild);else document.body.appendChild(bar);
+ function show(){const el=document.getElementById('svd');if(!el)return;if(!lastAt){el.textContent='';return}
+  if(!lsOk&&idbOk===false){el.style.color='#b42318';el.textContent='⚠ تعذر الحفظ — مساحة الموبايل ممتلئة. ابعت التقرير دلوقتي';return}
+  el.style.color='#1d6b35';el.textContent='اتحفظ ✓ الساعة '+hm(lastAt)}
+ // IndexedDB (reopens by itself if Safari drops the connection in the background)
+ function openDB(){if(dbP)return dbP;dbP=new Promise(res=>{try{const op=indexedDB.open(DBN,1);op.onupgradeneeded=()=>{if(!op.result.objectStoreNames.contains('kv'))op.result.createObjectStore('kv')};op.onsuccess=()=>{db=op.result;db.onversionchange=()=>{try{db.close()}catch(e){}db=null;dbP=null};db.onclose=()=>{db=null;dbP=null};res(db)};op.onerror=op.onblocked=()=>{dbP=null;res(null)}}catch(e){dbP=null;res(null)}});return dbP}
+ function tx(fn,mode){return openDB().then(d=>new Promise(res=>{if(!d)return res({ok:false});let out;try{const t=d.transaction('kv',mode||'readonly');out=fn(t.objectStore('kv'));t.oncomplete=()=>res({ok:true,v:out&&out.result});t.onerror=t.onabort=()=>res({ok:false})}catch(e){db=null;dbP=null;res({ok:false,retry:true})}}))}
+ function run(fn,mode){return tx(fn,mode).then(r=>r.retry?tx(fn,mode):r)}
+ function put(j,id){return run(o=>{o.put(j,'S');return id?o.put(j,'day:'+id):null},'readwrite').then(r=>r.ok)}
+ // light archive of days in localStorage too (fallback if IndexedDB is missing)
+ function lsDays(){try{return JSON.parse(localStorage.getItem(DK)||'{}')||{}}catch(e){return {}}}
+ function lsDaysWrite(){try{const A=lsDays();if(S&&S._id&&hasData(S))A[S._id]=S;const lim=Date.now()-KEEP_DAYS*864e5;const ids=Object.keys(A).filter(k=>A[k]&&(A[k]._ts||0)>lim).sort((x,y)=>(A[y]._ts||0)-(A[x]._ts||0)).slice(0,20);const B={};ids.forEach(k=>B[k]=A[k]);localStorage.setItem(DK,JSON.stringify(B))}catch(e){}}
+ save=function(){if(!S)return;if(!S._id)S._id=nid();S._ts=Date.now();let j;try{j=JSON.stringify(S)}catch(e){return}
+  try{localStorage.setItem(KEY,j);lsOk=true}catch(e){lsOk=false}
+  lastAt=S._ts;show();clearTimeout(dt);dt=setTimeout(lsDaysWrite,400);
+  return put(j,hasData(S)?S._id:null).then(ok=>{idbOk=ok;show();return ok})};
+ const soon=()=>setTimeout(save,0);
+ document.addEventListener('input',soon,true);document.addEventListener('change',soon,true);document.addEventListener('click',()=>setTimeout(save,30),true);
+ const bg=()=>{try{save();lsDaysWrite()}catch(e){}};
+ document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='hidden')bg()});['pagehide','beforeunload','blur'].forEach(ev=>window.addEventListener(ev,bg));document.addEventListener('freeze',bg);
+ // ask Safari to keep the data (again on first tap — Safari only says yes after an interaction)
+ const keep=()=>{try{if(navigator.storage&&navigator.storage.persist)navigator.storage.persist().catch(()=>{})}catch(e){}};keep();document.addEventListener('pointerdown',keep,{once:true,capture:true});
+ function redraw(){try{initHeader();renderRows();renderLeft();upd()}catch(e){}}
+ function banner(t){const o=document.getElementById('draftBanner');if(o)o.remove();const b=document.createElement('div');b.id='draftBanner';b.className='noprint';b.style.cssText='background:#fffbea;border:1px solid #f1d38a;border-radius:9px;padding:8px;margin:8px;font-size:13px';b.innerHTML=t;document.body.insertBefore(b,document.body.children[1]||null);setTimeout(()=>b.remove(),15000)}
+ // all saved days (IndexedDB + localStorage), newest first, current one excluded
+ async function allDays(){const m={};const A=lsDays();Object.keys(A).forEach(k=>{if(A[k])m[k]=A[k]});
+  const r=await run(o=>o.getAllKeys());const keys=(r.ok&&r.v||[]).filter(k=>String(k).startsWith('day:'));
+  if(keys.length){const g=await run(o=>{const out={};keys.forEach(k=>{const q=o.get(k);q.onsuccess=()=>{out[k]=q.result}});return {result:out}});const out=(g.ok&&g.v)||{};Object.keys(out).forEach(k=>{try{const x=JSON.parse(out[k]);if(x&&x._id&&(!m[x._id]||(m[x._id]._ts||0)<(x._ts||0)))m[x._id]=x}catch(e){}})}
+  const lim=Date.now()-KEEP_DAYS*864e5;const stale=keys.filter(k=>{const id=k.slice(4);return m[id]&&(m[id]._ts||0)<lim});if(stale.length)run(o=>{stale.forEach(k=>o.delete(k))},'readwrite');
+  return Object.values(m).filter(x=>x&&x.rows&&hasData(x)&&(x._ts||0)>=lim&&x._id!==(S&&S._id)).sort((a,b)=>(b._ts||0)-(a._ts||0))}
+ window.prodDays=allDays;
+ async function paintDaysBtn(){const b=document.getElementById('bDays');if(!b)return;const L=await allDays().catch(()=>[]);b.style.display=L.length?'':'none';b.textContent='📂 الأيام المحفوظة ('+L.length+')'}
+ const cnt=x=>(x.rows||[]).filter(r=>r&&r.p).length;
+ async function openDays(){const L=await allDays();const w=document.createElement('div');w.id='daysSheet';w.className='noprint';w.style.cssText='position:fixed;inset:0;background:#0007;z-index:10000;display:flex;align-items:flex-end;justify-content:center';
+  w.innerHTML='<div style="background:#fff;width:100%;max-width:520px;max-height:80vh;overflow:auto;border-radius:16px 16px 0 0;padding:14px 14px max(14px,env(safe-area-inset-bottom))"><div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px"><b style="font-size:17px">📂 الأيام المحفوظة</b><button type="button" data-d="x" style="font-size:15px;padding:6px 12px">إغلاق</button></div><div style="font-size:13px;color:#475569;margin-bottom:8px">كل يوم محفوظ لوحده على الموبايل ده. افتح أي يوم تكمّله أو تبعته — اليوم اللي إنت فيه بيفضل محفوظ برضه.</div>'+
+  (L.length?L.map(x=>'<div style="border:1px solid #e2e8f0;border-radius:12px;padding:10px;margin:8px 0;display:flex;justify-content:space-between;align-items:center;gap:8px"><div><b>'+esc(x.h&&x.h.date||'—')+'</b> · '+esc(x.h&&x.h.eng||'')+'<div style="font-size:12px;color:#64748b">'+cnt(x)+' باليت · آخر حفظ '+new Date(x._ts).toLocaleDateString('en-GB')+' '+hm(x._ts)+'</div></div><button type="button" class="btn" data-d="'+esc(x._id)+'" style="padding:8px 14px">افتح</button></div>').join(''):'<div style="padding:16px;text-align:center;color:#64748b">مفيش أيام تانية محفوظة</div>')+'</div>';
+  w.addEventListener('click',async e=>{const t=e.target.closest('[data-d]');if(e.target===w||t&&t.dataset.d==='x'){w.remove();return}if(!t)return;const x=L.find(y=>y._id===t.dataset.d);if(!x)return;await save();S=JSON.parse(JSON.stringify(x));if(!Array.isArray(S.left))S.left=[];await save();w.remove();redraw();scrollTo(0,0);banner('📂 فتحت يوم <b>'+esc(S.h.date||'')+'</b> — اليوم اللي كنت فيه محفوظ في «الأيام المحفوظة».');paintDaysBtn()});
+  document.body.appendChild(w)}
+ document.getElementById('bDays').onclick=openDays;
+ // «يوم جديد»: the current day stays saved (no wipe)
+ const bN=document.getElementById('bNew');if(bN)bN.onclick=async()=>{if(!confirm('هتبدأ يوم جديد. اليوم الحالي هيفضل محفوظ في «📂 الأيام المحفوظة» وتقدر تفتحه تاني. متأكد؟'))return;await save();lsDaysWrite();S=blank(S.h.eng,S.h.exp);delete S.h.code;await save();redraw();scrollTo(0,0);paintDaysBtn()};
+ // boot: newest copy wins (localStorage or IndexedDB)
+ (async()=>{const r=await run(o=>o.get('S'));let v=null;try{v=r.ok&&r.v?JSON.parse(r.v):null}catch(e){}
+  let ls=null;try{ls=JSON.parse(localStorage.getItem(KEY))}catch(e){}
+  if(location.hash!=='#demo'){const best=[S,ls,v].filter(x=>x&&x.rows&&hasData(x)).sort((a,b)=>(b._ts||0)-(a._ts||0))[0];
+   if(best&&best!==S){S=best;if(!Array.isArray(S.left))S.left=[];redraw()}}
+  if(hasData(S)){if(!S._id)S._id=nid();await save();banner('📝 <b>مسودة غير مكتملة</b> — بيانات تقرير الإنتاج اتسترجعت تلقائياً (آخر حفظ '+hm(S._ts)+'). كمّل من مكان ما وقفت.')}
+  paintDaysBtn()})();
+})();
 </script></body></html>
