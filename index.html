@@ -74,8 +74,8 @@ table.sum th{background:var(--g);color:#fff}
  </div>
  <div class="card alerts" id="alerts"></div>
  <div class="card"><h2>الباليتات</h2>
-  <div class="hint"><b>الطريقة الجديدة:</b> دوس «+ باليتات جديدة بأرقام من القايمة»، اختار الصنف والمقاس وكل البيانات، وبعدين «🔢 اختار أرقام الباليتات» وعلّم أرقام الاستيكرات (P0001…P0200) — كل رقم بيتعمل باليت بنفس المواصفة، والرقم اللي يتاخد بيتشال من القايمة. تقدر تعدّل أي باليت بعدها (مثلاً عدد كراتين ناقص) أو تحذفه والرقم يرجع للقايمة.<br>كل باليت في كارت. رقم الباليت من الاستيكر: حرف P وبعده أرقام (مثال P0001 أو P-9001، لحد 12 حرف)، بيتحول كابيتال تلقائي. اختار <b>الصنف الأول</b>، بعدين نوع التعبئة ونوع الكرتون/الصندوق، وبعدها تظهر المقاسات المناسبة له بس (الأفندي: اكتب عدد الحبات بالصندوق). تحت المقاس بيظهر القطر ووزن الحبة التقريبي بخط خفيف. وزن الكرتونة بيتكتب لوحده من نوع الكرتون وتقدر تغيره. لو الباليت فيه أكثر من مقاس اختار MIX وسجّل عدد الكراتين لكل مقاس. المقاس تقدر تضيفه من «+ مقاس جديد»، واسم الكرتون من «+ اسم جديد».</div><br>
-  <button class="btn ptop" id="pAdd" type="button">+ باليتات جديدة بأرقام من القايمة</button>
+  <div class="hint"><b>الإدخال:</b> «+ باليتات جديدة» ← اختار المواصفة بالأزرار (أو دوسة على مواصفة قديمة) ← علّم أرقام الاستيكرات ← تأكيد. «↺ نفس آخر مواصفة» بيروح للأرقام على طول. أي باليت تقدر تعدّله أو تحذفه والرقم يرجع للقايمة.<br>كل باليت في كارت. رقم الباليت من الاستيكر: حرف P وبعده أرقام (مثال P0001 أو P-9001، لحد 12 حرف)، بيتحول كابيتال تلقائي. اختار <b>الصنف الأول</b>، بعدين نوع التعبئة ونوع الكرتون/الصندوق، وبعدها تظهر المقاسات المناسبة له بس (الأفندي: اكتب عدد الحبات بالصندوق). تحت المقاس بيظهر القطر ووزن الحبة التقريبي بخط خفيف. وزن الكرتونة بيتكتب لوحده من نوع الكرتون وتقدر تغيره. لو الباليت فيه أكثر من مقاس اختار MIX وسجّل عدد الكراتين لكل مقاس. المقاس تقدر تضيفه من «+ مقاس جديد»، واسم الكرتون من «+ اسم جديد».</div><br>
+  <div id="pBar" class="pbar"><button class="btn" id="pAdd" type="button">+ باليتات جديدة</button></div>
   <div id="rows"></div>
   <button class="btn2" style="width:100%" id="addRow">+ إضافة باليت</button>
  </div>
@@ -322,7 +322,7 @@ if(location.hash==='#demo'){S=blank();S.h.eng='م. أحمد';
 initHeader();renderRows();renderLeft();upd();
 if('serviceWorker' in navigator&&(location.protocol==='https:'||location.hostname==='localhost'))navigator.serviceWorker.register('sw.js').catch(()=>{});
 </script>
-<script src="pallet-pool.js?v=1"></script>
+<script src="pallet-pool.js?v=2"></script>
 <script>
 // ===== No-data-loss autosave: every change -> localStorage + IndexedDB mirror; restored after sleep/kill/restart =====
 (function(){let db=null;const ind=document.createElement('div');ind.className='noprint';ind.style.cssText='position:fixed;bottom:6px;left:8px;font-size:11px;background:#1d4d2b;color:#dfffd6;padding:2px 8px;border-radius:8px;z-index:99;opacity:.9';document.body.appendChild(ind);
