@@ -74,7 +74,8 @@ table.sum th{background:var(--g);color:#fff}
  </div>
  <div class="card alerts" id="alerts"></div>
  <div class="card"><h2>الباليتات</h2>
-  <div class="hint">كل باليت في كارت. رقم الباليت من الاستيكر: حرف P وبعده أرقام (مثال P0001 أو P-9001، لحد 12 حرف)، بيتحول كابيتال تلقائي. اختار <b>الصنف الأول</b>، بعدين نوع التعبئة ونوع الكرتون/الصندوق، وبعدها تظهر المقاسات المناسبة له بس (الأفندي: اكتب عدد الحبات بالصندوق). تحت المقاس بيظهر القطر ووزن الحبة التقريبي بخط خفيف. وزن الكرتونة بيتكتب لوحده من نوع الكرتون وتقدر تغيره. لو الباليت فيه أكثر من مقاس اختار MIX وسجّل عدد الكراتين لكل مقاس. المقاس تقدر تضيفه من «+ مقاس جديد»، واسم الكرتون من «+ اسم جديد».</div><br>
+  <div class="hint"><b>الطريقة الجديدة:</b> دوس «+ باليتات جديدة بأرقام من القايمة»، اختار الصنف والمقاس وكل البيانات، وبعدين «🔢 اختار أرقام الباليتات» وعلّم أرقام الاستيكرات (P0001…P0200) — كل رقم بيتعمل باليت بنفس المواصفة، والرقم اللي يتاخد بيتشال من القايمة. تقدر تعدّل أي باليت بعدها (مثلاً عدد كراتين ناقص) أو تحذفه والرقم يرجع للقايمة.<br>كل باليت في كارت. رقم الباليت من الاستيكر: حرف P وبعده أرقام (مثال P0001 أو P-9001، لحد 12 حرف)، بيتحول كابيتال تلقائي. اختار <b>الصنف الأول</b>، بعدين نوع التعبئة ونوع الكرتون/الصندوق، وبعدها تظهر المقاسات المناسبة له بس (الأفندي: اكتب عدد الحبات بالصندوق). تحت المقاس بيظهر القطر ووزن الحبة التقريبي بخط خفيف. وزن الكرتونة بيتكتب لوحده من نوع الكرتون وتقدر تغيره. لو الباليت فيه أكثر من مقاس اختار MIX وسجّل عدد الكراتين لكل مقاس. المقاس تقدر تضيفه من «+ مقاس جديد»، واسم الكرتون من «+ اسم جديد».</div><br>
+  <button class="btn ptop" id="pAdd" type="button">+ باليتات جديدة بأرقام من القايمة</button>
   <div id="rows"></div>
   <button class="btn2" style="width:100%" id="addRow">+ إضافة باليت</button>
  </div>
@@ -150,13 +151,14 @@ function mixEditor(i,r){if(r.s!=='MIX')return '';const lines=Array.isArray(r.mix
  return `<div class="mix"><div class="mixh">تفصيل المقاسات داخل الباليت — عدد الكراتين لكل مقاس</div>${lines.map((ln,j)=>`<div class="mixln"><select data-i="${i}" data-mix="${j}" data-mk="s">${opts(rowSizes(r)||SZ(),ln.s,'— المقاس —')}<option value="__new">+ مقاس جديد…</option></select><input data-i="${i}" data-mix="${j}" data-mk="n" type="number" inputmode="numeric" min="1" step="1" placeholder="عدد الكراتين" value="${esc(ln.n)}"><button type="button" class="mixrm" data-i="${i}" data-mix="${j}" aria-label="حذف المقاس">×</button></div>`).join('')}<button type="button" class="mixadd" data-i="${i}">+ مقاس</button><div class="mixsum" id="mixsum${i}"></div></div>`}
 function renderRows(){
  $('rows').innerHTML=S.rows.map((r,i)=>`<div class="row" id="r${i}"><div class="top"><span class="num">${i+1}</span>
- <input data-i="${i}" data-k="p" value="${esc(r.p)}" placeholder="P0000 / P-9001" inputmode="text" autocapitalize="characters" autocomplete="off" maxlength="12">
- <span class="run" id="run${i}"></span></div>
+ <input data-i="${i}" data-k="p" value="${esc(r.p)}" placeholder="رقم الباليت (من القايمة)" inputmode="text" autocapitalize="characters" autocomplete="off" maxlength="12">
+ <span class="run" id="run${i}"></span><button type="button" class="prm" data-prm="${i}" aria-label="حذف الباليت">حذف</button></div>
  <div class="rgrid3">${sel(i,'v',L.variety,r)}${sel(i,'pk',L.pack,r)}${sel(i,'c',CTg(r),r).replace('</select>','<option value="__new">+ نوع جديد…</option></select>')}${sizeSelect(i,r)}${sel(i,'b',BR(),r).replace('</select>','<option value="__new">+ اسم جديد…</option></select>')}${sel(i,'g',L.grade,r)}${sel(i,'loc',L.loc,r)}
  <div><div class="sl">عدد الكراتين</div><input data-i="${i}" data-k="n" type="number" inputmode="numeric" min="1" step="1" value="${esc(r.n)}"></div>
  <div><div class="sl">وزن الكرتونة (كجم)</div><input data-i="${i}" data-k="w" type="number" inputmode="decimal" min="0" step="0.1" value="${esc(r.w)}"></div></div>
  ${mixEditor(i,r)}
  <div class="sl">ملاحظات</div><input data-i="${i}" data-k="note" value="${esc(r.note)}">
+ <button type="button" class="pkb" id="pk${i}" data-pick="${i}" disabled>🔢 أرقام الباليتات</button>
  <div class="msg" id="m${i}"></div></div>`).join('');
 }
 function applyMixField(t){const i=+t.dataset.i,j=+t.dataset.mix,r=S.rows[i];r.mix=Array.isArray(r.mix)?r.mix:[];while(r.mix.length<=j)r.mix.push({s:'',n:''});r.mix[j][t.dataset.mk]=t.value;const lines=mixLines(r);if(lines.length){r.n=String(mixSum(r));const nel=document.querySelector(`input[data-i="${i}"][data-k="n"]`);if(nel)nel.value=r.n}}
@@ -185,7 +187,7 @@ function analyse(){
  const cnt={};S.rows.forEach(r=>{if(r.p)cnt[r.p]=(cnt[r.p]||0)+1});
  let run=0,pal=0,dups=0,bad=0,miss=0,kg=0;const sum={};const res=[];
  S.rows.forEach(r=>{const o={};
-  if(r.p){pal++;if(!VALID.test(r.p)){o.bad=1;bad++}else if(cnt[r.p]>1){o.dup=1;dups++}}
+  if(r.p){pal++;if(!VALID.test(r.p)){o.bad=1;bad++}else if(cnt[r.p]>1){o.dup=1;dups++}else if(window.POOL&&POOL.takenByOther(r.p)){o.dup=1;o.taken=1;dups++}}
   if(r.s==='MIX'){const lines=mixLines(r);const uniq=new Set(lines.map(x=>x.s));if(lines.length<2||uniq.size!==lines.length)o.mixBad='أضف مقاسين مختلفين على الأقل مع عدد الكراتين لكل مقاس';else if((parseInt(r.n)||0)!==mixSum(r))o.mixBad='مجموع كراتين المقاسات ('+mixSum(r)+') لا يساوي عدد الكراتين'}
   if(filled(r)){o.miss=REQ.filter(k=>!r[k]);if(o.mixBad&&!o.miss.includes('s'))o.miss.push('s');if(o.miss.length)miss++}
   const n=parseInt(r.n)||0,w=parseFloat(r.w)||0;run+=n;o.kg=n*w;kg+=o.kg;
@@ -231,8 +233,8 @@ function upd(){
   row.classList.toggle('dup',!!o.dup);
   const zi=$('szi'+i);if(zi){const h=szInfoHTML(S.rows[i]);if(zi.innerHTML!==h)zi.innerHTML=h}
   const otherMiss=(o.miss||[]).filter(k=>!(k==='s'&&S.rows[i].s==='MIX'));
-  $('m'+i).textContent=o.bad?'رقم غير صحيح — لازم يبدأ بـ P وفيه أرقام (لحد 12 حرف)':o.dup?'رقم مكرر!':(otherMiss.length?'بيانات ناقصة':(o.mixBad||''));
-  $('run'+i).textContent=o.kg?(Math.round(o.kg*10)/10+' كجم'):''});
+  $('m'+i).textContent=o.bad?'رقم غير صحيح — لازم يبدأ بـ P وفيه أرقام (لحد 12 حرف)':o.taken?'الرقم ده اتاخد من موبايل تاني — غيّره':o.dup?'رقم مكرر!':(otherMiss.length?'بيانات ناقصة':(o.mixBad||''));
+  $('run'+i).textContent=o.kg?(Math.round(o.kg*10)/10+' كجم'):'';if(window.POOL)POOL.rowHook(i)});if(window.POOL)POOL.changed();
  const LT=leftTot(),LA=leftAnalyse();
  $('stat').innerHTML=LT.rows?`${A.pal} باليت + نواقص ${LT.n} — ${A.run+LT.n} كرتونة<br>${r1(A.kg+LT.kg)} كجم`:`${A.pal} باليت — ${A.run} كرتونة<br>${A.kg} كجم`;
  const al=[];if(A.dups)al.push(`<div class="a-bad">⚠ يوجد ${A.dups} سطر برقم باليت مكرر</div>`);
@@ -320,6 +322,7 @@ if(location.hash==='#demo'){S=blank();S.h.eng='م. أحمد';
 initHeader();renderRows();renderLeft();upd();
 if('serviceWorker' in navigator&&(location.protocol==='https:'||location.hostname==='localhost'))navigator.serviceWorker.register('sw.js').catch(()=>{});
 </script>
+<script src="pallet-pool.js?v=1"></script>
 <script>
 // ===== No-data-loss autosave: every change -> localStorage + IndexedDB mirror; restored after sleep/kill/restart =====
 (function(){let db=null;const ind=document.createElement('div');ind.className='noprint';ind.style.cssText='position:fixed;bottom:6px;left:8px;font-size:11px;background:#1d4d2b;color:#dfffd6;padding:2px 8px;border-radius:8px;z-index:99;opacity:.9';document.body.appendChild(ind);
