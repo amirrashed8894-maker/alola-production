@@ -108,12 +108,13 @@ async pdf(d){
  if(!st){st=document.createElement('div');st.id='prstage';st.style.cssText='position:fixed;left:-12000px;top:0;width:794px';document.body.appendChild(st)}
  if(!document.getElementById('prcss')){const s=document.createElement('style');s.id='prcss';s.textContent=CSS;document.head.appendChild(s)}
  st.innerHTML=mastHTML()+footHTML(1,1,d,dt)+'<div class="blk" id="prmeas"></div>';
- await document.fonts.ready;
+ const imgsReady=root=>Promise.all([...root.querySelectorAll('img')].map(img=>img.complete&&img.naturalWidth?1:new Promise(r=>{img.onload=img.onerror=r;setTimeout(r,4000)})));
+ await document.fonts.ready;await imgsReady(st);
  const meas=st.querySelector('#prmeas');
  const topH=st.querySelector('.chromeTop').offsetHeight;
  const footH=(()=>{const f=st.querySelector('.foot');const prev=f.style.position;f.style.position='relative';const h=f.offsetHeight;f.style.position=prev;return h})();
  const maxH=1123-topH-footH-14;
- const measure=html=>{meas.innerHTML=`<div class="blk">${html}</div>`;return Math.ceil(meas.firstElementChild.offsetHeight)};
+ const measure=html=>{meas.innerHTML=`<div class="blk" style="display:flow-root">${html}</div>`;return Math.ceil(meas.firstElementChild.offsetHeight)};
  const measureRows=(html,cls)=>{meas.innerHTML=`<table class="${cls||''}">${html}</table>`;return [...meas.querySelectorAll('tr')].map(tr=>Math.ceil(tr.offsetHeight))};
  const sum=summaryTable(rows,d.exp,left.length>0,left), det=detailTable(rows,left.length>0);
  const blocks=[];
@@ -134,11 +135,11 @@ async pdf(d){
  blocks.forEach(b=>{if(b.type==='html')b.h=measure(b.html);else{b.beforeH=b.before?measure(b.before):0;b.hs=measureRows((b.head||'')+b.rows.join(''),b.tableClass)}});
  const pages=[];let cur=[],h=0;
  const flush=()=>{if(cur.length)pages.push(cur);cur=[];h=0};
- function place(html,bh){if(h&&h+bh>maxH)flush();cur.push(html);h+=bh}
- for(const b of blocks){
-  if(b.type==='html'){place(b.html,b.h);continue}
+ function place(html,bh,bi){if(h&&h+bh>maxH)flush();cur.push(`<div class="chk" data-b="${bi}">${html}</div>`);h+=bh}
+ for(const [bi,b] of blocks.entries()){
+  if(b.type==='html'){place(b.html,b.h,bi);continue}
   const headH=b.hs[0]||0;let i=0;const rhs=b.hs.slice(1);
-  if(!b.rows.length){place((b.before||'')+`<table>${b.head}</table>`,(b.beforeH||0)+headH);continue}
+  if(!b.rows.length){place((b.before||'')+`<table>${b.head}</table>`,(b.beforeH||0)+headH,bi);continue}
   while(i<b.rows.length){
    const lead=i===0?(b.before||''):'';const leadH=i===0?(b.beforeH||0):0;const showHead=i===0||b.repeat;
    let used=leadH+(showHead?headH:0);const slice=[];let guard=0;
@@ -150,7 +151,7 @@ async pdf(d){
     if(!slice.length)break;
    }
    if(!slice.length)continue;
-   cur.push(lead+`<table class="${b.tableClass||''}">${showHead?b.head:''}<tbody>${slice.join('')}</tbody></table>`);
+   cur.push(`<div class="chk" data-b="${bi}" data-t="1">`+lead+`<table class="${b.tableClass||''}">${showHead?b.head:''}<tbody>${slice.join('')}</tbody></table></div>`);
    h+=used;
    if(i<b.rows.length)flush();
   }
@@ -163,6 +164,31 @@ async pdf(d){
   page.innerHTML=mastHTML()+`<div class="body">${chunks.join('')}</div>`+footHTML(idx+1,total,d,dt);
   st.appendChild(page);nodes.push(page);
  });
+ await document.fonts.ready;await imgsReady(st);
+ // v20: the estimate above can be short (margins, iPhone fonts). Check the real layout and move anything that would be hidden under the footer to the next page — no row can ever be cut off.
+ const mkPage=()=>{const page=document.createElement('div');page.className='page';page.innerHTML=mastHTML()+'<div class="body"></div>'+footHTML(1,1,d,dt);return page};
+ const overflow=pg=>{const bd=pg.querySelector('.body'),ft=pg.querySelector('.foot');const lc=bd.lastElementChild;if(!lc)return false;return lc.getBoundingClientRect().bottom>ft.getBoundingClientRect().top-2};
+ const nextBody=k=>{if(!nodes[k+1]){const np=mkPage();nodes[k].after(np);nodes.splice(k+1,0,np)}return nodes[k+1].querySelector('.body')};
+ const tblRows=ch=>{const tb=ch.querySelector('table>tbody');return tb?[...tb.children]:[]};
+ const keepTr=tr=>!!tr&&(tr.classList.contains('gh')||tr.getAttribute('data-keep')==='1');
+ for(let k=0,guard=0;k<nodes.length&&guard<5000;k++){
+  while(overflow(nodes[k])&&guard++<5000){
+   const bd=nodes[k].querySelector('.body');const ch=bd.lastElementChild;const nb=nextBody(k);const first=nb.firstElementChild;
+   const bi=ch.dataset.b,isT=ch.dataset.t==='1',trs=isT?tblRows(ch):[];
+   if(isT&&trs.length>1){// move the last row(s) — keep a group title / long note with its row
+    let cut=trs.length-1;while(cut>0&&keepTr(trs[cut-1]))cut--;if(trs[cut].classList.contains('ntrow')&&cut>0)cut--;while(cut>0&&keepTr(trs[cut-1]))cut--;
+    if(cut===0){if(bd.children.length===1){if(trs.length<=1)break;cut=trs.length-1}else cut=0}
+    if(cut>0){const mv=trs.slice(cut);let tgt=first&&first.dataset.b===bi&&first.dataset.t==='1'?first.querySelector('table>tbody'):null;
+     if(!tgt){const b=blocks[+bi];const nc=document.createElement('div');nc.className='chk';nc.dataset.b=bi;nc.dataset.t='1';nc.innerHTML=`<table class="${b.tableClass||''}">${b.repeat?b.head:''}<tbody></tbody></table>`;nb.insertBefore(nc,nb.firstChild);tgt=nc.querySelector('tbody')}
+     mv.reverse().forEach(tr=>tgt.insertBefore(tr,tgt.firstChild));continue}
+   }
+   if(bd.children.length===1)break;// one block taller than a page: nothing better to do
+   // move the whole block; if it continues on the next page, merge it there (heading + rows together)
+   if(isT&&first&&first.dataset.b===bi&&first.dataset.t==='1'){const tb=ch.querySelector('table>tbody'),t2=first.querySelector('table>tbody');[...t2.children].forEach(tr=>tb.appendChild(tr));first.remove()}
+   nb.insertBefore(ch,nb.firstChild)}
+ }
+ for(let k=nodes.length-1;k>0;k--){if(!nodes[k].querySelector('.body').children.length){nodes[k].remove();nodes.splice(k,1)}}
+ nodes.forEach((pg,k)=>{const f=pg.querySelector('.foot');const t=document.createElement('div');t.innerHTML=footHTML(k+1,nodes.length,d,dt);f.replaceWith(t.firstElementChild)});
  meas.remove();st.querySelectorAll('.chromeTop,.foot').forEach((el,i)=>{if(!el.closest('.page'))el.remove()});
  await document.fonts.ready;
  await Promise.all([...st.querySelectorAll('img')].map(img=>img.complete&&img.naturalWidth?1:new Promise(r=>{img.onload=img.onerror=r})));
