@@ -36,7 +36,7 @@ function reconcile(){if(!S)return;if(!Array.isArray(S.poolNums))S.poolNums=[];co
  if(ch){persist();try{save()}catch(e){}flush()}}
 function changed(){clearTimeout(rt);rt=setTimeout(reconcile,700)}
 /* ---------- spec completeness of a card ---------- */
-function specOk(r){if(!r||!r.v)return false;if(['v','s','pk','c','b','g','loc','n'].some(k=>!String(r[k]||'').trim()))return false;if(r.s==='MIX'){const L=mixLines(r);if(L.length<2||new Set(L.map(x=>x.s)).size!==L.length||(parseInt(r.n)||0)!==mixSum(r))return false}return true}
+function specOk(r){if(!r||!r.v)return false;if(['v','s','pk','c','b','g','loc','n'].some(k=>!String(r[k]||'').trim()))return false;if(!/^[1-9]\d*$/.test(String(r.n).trim()))return false;if(r.s==='MIX'){const L=mixLines(r);if(L.length<2||new Set(L.map(x=>x.s)).size!==L.length||(parseInt(r.n)||0)!==mixSum(r))return false}return true}
 function rowHook(i){const b=document.getElementById('pk'+i);if(!b)return;const r=S.rows[i];const ok=specOk(r);b.disabled=!ok;b.textContent=ok?(r.p?'🔢 باليتات تانية بنفس المواصفة':'🔢 اختار أرقام الباليتات'):'🔢 أرقام الباليتات — كمّل المواصفة الأول'}
 /* ---------- v2 entry: one sheet → «المواصفة» (big chips, last spec prefilled, recent specs) → «الأرقام» (big buttons, range, +N) → «تأكيد» ---------- */
 let cur=null;
@@ -124,11 +124,11 @@ function drawSpec(el){const W=cur.spec;const R=recent();const g=GOF(W.v);
  ${grp('اسم الكرتون','b',BR(),W.b,'<button type="button" class="ch add" data-sadd="b">+ اسم</button>')}
  ${grp('الدرجة','g',L.grade,W.g)}
  ${grp('مكان التخزين','loc',L.loc,W.loc)}
- <div class="grp${!W.n&&cur.tried?' need':''}" id="g_n"><div class="gt"><span>عدد الكراتين في الباليت</span>${nIsMix?'<b>من تفصيل MIX</b>':''}</div><div class="num"><button type="button" data-nd="-1">−</button><input id="ppnn" type="number" inputmode="numeric" value="${esc(W.n)}" ${nIsMix?'disabled':''} placeholder="العدد"><button type="button" data-nd="1">+</button></div>
+ <div class="grp${!/^[1-9]\d*$/.test(String(W.n||'').trim())&&cur.tried?' need':''}" id="g_n"><div class="gt"><span>عدد الكراتين في الباليت</span>${nIsMix?'<b>من تفصيل MIX</b>':''}</div><div class="num"><button type="button" data-nd="-1">−</button><input id="ppnn" type="number" inputmode="numeric" value="${esc(W.n)}" ${nIsMix?'disabled':''} placeholder="العدد"><button type="button" data-nd="1">+</button></div>
  <div class="gt" style="margin-top:8px"><span>وزن الكرتونة (كجم)</span></div><div class="num"><input id="ppw" type="number" inputmode="decimal" step="0.1" value="${esc(W.w)}" style="font-size:18px;min-height:46px"></div></div>
  </div>
  <div class="ft"><button type="button" class="btn go" data-pp="tonums" ${specOk(W)?'':'style="background:#9db59f"'}>${specOk(W)?'التالي: اختار الأرقام ←':'كمّل: '+missing(W).join('، ')}</button></div>`}
-function missing(W){const N={v:'الصنف',pk:'التعبئة',c:'الكرتون',s:'المقاس',b:'اسم الكرتون',g:'الدرجة',loc:'التخزين',n:'عدد الكراتين'};const m=Object.keys(N).filter(k=>!String(W[k]||'').trim()).map(k=>N[k]);if(W.s==='MIX'&&(mixLines(W).length<2))m.push('مقاسين MIX على الأقل');return m}
+function missing(W){const N={v:'الصنف',pk:'التعبئة',c:'الكرتون',s:'المقاس',b:'اسم الكرتون',g:'الدرجة',loc:'التخزين',n:'عدد الكراتين'};const m=Object.keys(N).filter(k=>!String(W[k]||'').trim()).map(k=>N[k]);if(String(W.n||'').trim()&&!/^[1-9]\d*$/.test(String(W.n).trim()))m.push('عدد الكراتين (رقم صحيح أكبر من صفر)');if(W.s==='MIX'&&(mixLines(W).length<2))m.push('مقاسين MIX على الأقل');return m}
 function setField(f,v){const W=cur.spec;
  if((f==='v'||f==='pk'||f==='c')&&window.ALS){W[f]=v;if(f==='v'){const g=GOF(v);if(g==='mand'&&!W.pk)W.pk='صندوق بلاستيك';if(g==='lemon'&&!W.pk)W.pk='كرتون'}
   if(W.c&&!CTg(W).includes(W.c))W.c='';
@@ -137,7 +137,7 @@ function setField(f,v){const W=cur.spec;
  else W[f]=v;
  if(f==='s'&&v==='MIX'){W.mix=W.mix||[];W.n=String(mixSum(W)||'')}
  if(f==='s'&&v!=='MIX')W.mix=[]}
-function nextNeed(){const W=cur.spec;const order=['v','pk','c','s','b','g','loc','n'];const k=order.find(k=>!String(W[k]||'').trim());return k?document.getElementById('g_'+k):null}
+function nextNeed(){const W=cur.spec;const order=['v','pk','c','s','b','g','loc','n'];const k=order.find(k=>!String(W[k]||'').trim()||(k==='n'&&!/^[1-9]\d*$/.test(String(W.n).trim())));return k?document.getElementById('g_'+k):null}
 function drawNums(el){const W=cur.spec;const u=used();const f0=firstFreeBlock(u);if(f0!==cur.first){if(cur.block===cur.first||cur.block<f0)cur.block=f0;cur.first=f0}
  cur.sel=cur.sel.filter(x=>!u.has(x));const a=cur.block*BLOCK+1,b=a+BLOCK-1;const free=[];for(let n=a;n<=b;n++){const p=fmt(n);if(!u.has(p))free.push(p)}
  const isAmir=(()=>{try{const x=window.AlolaAuth&&AlolaAuth.user&&AlolaAuth.user();return x&&x.username==='amir'}catch(e){return false}})();

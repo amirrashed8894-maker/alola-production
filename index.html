@@ -193,15 +193,16 @@ function guardChange(r,k,val){if(!window.ALS||(k!=='v'&&!val))return true;const 
 const filled=r=>F.some(k=>r[k]);
 function analyse(){
  const cnt={};S.rows.forEach(r=>{if(r.p)cnt[r.p]=(cnt[r.p]||0)+1});
- let run=0,pal=0,dups=0,bad=0,miss=0,kg=0;const sum={};const res=[];
+ let run=0,pal=0,dups=0,bad=0,miss=0,kg=0,nbad=0;const sum={};const res=[];
  S.rows.forEach(r=>{const o={};
   if(r.p){pal++;if(!VALID.test(r.p)){o.bad=1;bad++}else if(cnt[r.p]>1){o.dup=1;dups++}else if(window.POOL&&POOL.takenByOther(r.p)){o.dup=1;o.taken=1;dups++}}
   if(r.s==='MIX'){const lines=mixLines(r);const uniq=new Set(lines.map(x=>x.s));if(lines.length<2||uniq.size!==lines.length)o.mixBad='أضف مقاسين مختلفين على الأقل مع عدد الكراتين لكل مقاس';else if((parseInt(r.n)||0)!==mixSum(r))o.mixBad='مجموع كراتين المقاسات ('+mixSum(r)+') لا يساوي عدد الكراتين'}
+  {const nv=String(r.n??'').trim(),wv=String(r.w??'').trim();if(nv&&!/^[1-9]\d*$/.test(nv))o.nBad=1;if(wv&&!(parseFloat(wv)>0&&isFinite(Number(wv))))o.wBad=1;if(o.nBad||o.wBad)nbad++}
   if(filled(r)){o.miss=REQ.filter(k=>!r[k]);if(o.mixBad&&!o.miss.includes('s'))o.miss.push('s');if(o.miss.length)miss++}
   const n=parseInt(r.n)||0,w=parseFloat(r.w)||0;run+=n;o.kg=n*w;kg+=o.kg;
   if(r.p&&r.v){const sKey=r.s==='MIX'?sizeLabel(r):(r.s||'');const K=r.v+'\u0001'+sKey+'\u0001'+(r.c||'');sum[K]=sum[K]||{v:r.v,s:sKey,c:r.c||'',p:0,n:0,kg:0};sum[K].p++;sum[K].n+=n;sum[K].kg+=n*w}
   res.push(o)});
- return {res,run,pal,dups,bad,miss,kg:Math.round(kg*10)/10,sum};
+ return {res,run,pal,dups,bad,miss,nbad,kg:Math.round(kg*10)/10,sum};
 }
 /* ---------- v22: النواقص (بواقي التشغيل بدون رقم باليت) ---------- */
 const LREQ=['v','c','s','n'];
@@ -235,18 +236,19 @@ document.addEventListener('click',e=>{const t=e.target;if(t.dataset&&t.dataset.l
 function upd(){
  save();try{renderRaw()}catch(e){}const A=analyse();
  A.res.forEach((o,i)=>{const row=$('r'+i);if(!row)return;
-  row.querySelectorAll('[data-k]').forEach(el=>{const k=el.dataset.k;el.classList.toggle('err',k==='p'&&!!(o.bad||o.dup));el.classList.toggle('miss',!!(o.miss&&o.miss.includes(k))&&!(k==='p'&&(o.bad||o.dup)))});
+  row.querySelectorAll('[data-k]').forEach(el=>{const k=el.dataset.k;el.classList.toggle('err',(k==='p'&&!!(o.bad||o.dup))||(k==='n'&&!!o.nBad)||(k==='w'&&!!o.wBad));el.classList.toggle('miss',!!(o.miss&&o.miss.includes(k))&&!(k==='p'&&(o.bad||o.dup)))});
   row.querySelectorAll('[data-mk]').forEach(el=>el.classList.toggle('miss',!!o.mixBad));
   const sumEl=$('mixsum'+i);if(sumEl){const lines=mixLines(S.rows[i]);const sum=lines.reduce((a,x)=>a+x.n,0);sumEl.textContent=lines.length?('مجموع تفصيل المقاسات: '+sum+' كرتونة'):'اختر كل مقاس وعدّ الكراتين الخاصة به'}
   row.classList.toggle('dup',!!o.dup);
   const zi=$('szi'+i);if(zi){const h=szInfoHTML(S.rows[i]);if(zi.innerHTML!==h)zi.innerHTML=h}
   const otherMiss=(o.miss||[]).filter(k=>!(k==='s'&&S.rows[i].s==='MIX'));
-  $('m'+i).textContent=o.bad?'رقم غير صحيح — لازم يبدأ بـ P وفيه أرقام (لحد 12 حرف)':o.taken?'الرقم ده اتاخد من موبايل تاني — غيّره':o.dup?'رقم مكرر!':(otherMiss.length?'بيانات ناقصة':(o.mixBad||''));
+  $('m'+i).textContent=o.bad?'رقم غير صحيح — لازم يبدأ بـ P وفيه أرقام (لحد 12 حرف)':o.taken?'الرقم ده اتاخد من موبايل تاني — غيّره':o.dup?'رقم مكرر!':o.nBad?'عدد الكراتين لازم رقم صحيح أكبر من صفر':o.wBad?'وزن الكرتونة لازم رقم أكبر من صفر':(otherMiss.length?'بيانات ناقصة':(o.mixBad||''));
   $('run'+i).textContent=o.kg?(Math.round(o.kg*10)/10+' كجم'):'';if(window.POOL)POOL.rowHook(i)});if(window.POOL)POOL.changed();
  const LT=leftTot(),LA=leftAnalyse();
  $('stat').innerHTML=LT.rows?`${A.pal} باليت + نواقص ${LT.n} — ${A.run+LT.n} كرتونة<br>${r1(A.kg+LT.kg)} كجم`:`${A.pal} باليت — ${A.run} كرتونة<br>${A.kg} كجم`;
  const al=[];if(A.dups)al.push(`<div class="a-bad">⚠ يوجد ${A.dups} سطر برقم باليت مكرر</div>`);
  if(A.bad)al.push(`<div class="a-bad">⚠ يوجد ${A.bad} رقم باليت غير صحيح</div>`);
+ if(A.nbad)al.push(`<div class="a-bad">⚠ يوجد ${A.nbad} باليت فيه عدد كراتين أو وزن غلط</div>`);
  if(A.miss)al.push(`<div class="a-bad">⚠ يوجد ${A.miss} سطر بيانات ناقصة</div>`);
  if(LA.miss)al.push(`<div class="a-bad">⚠ يوجد ${LA.miss} سطر نواقص بيانات ناقصة</div>`);
  if(LA.bad)al.push(`<div class="a-bad">⚠ يوجد ${LA.bad} سطر نواقص فيه عدد أو وزن غلط</div>`);
@@ -274,7 +276,10 @@ function rawMap(){const o={};const vs=rawVarieties();vs.forEach(v=>{const x=pars
 function extraHead(){const o=[];const sp=String(S.h.sup||'').trim();if(sp)o.push(['اسم المورد',sp]);const m=rawMap();const t=Object.values(m).reduce((a,b)=>a+b,0);if(t>0)o.push(['الخام الداخل كجم',Math.round(t*10)/10]);return o}
 function repData(){if(!S.h.code){S.h.code=prCode(S.h.date);save()}else syncCode();
  const d=new Date();const A=analyse(),N=v=>v===''||v==null?'':(isNaN(Number(v))?v:Number(v));const aoa=[['الإنتاج اليومي — شركة العلا لفرز الحاصلات الزراعية'],[],['تاريخ الإنتاج',S.h.date],['مهندس التشغيل',S.h.eng],['المُصدر',expDisplay(S.h.exp)],['الوردية',S.h.shift||''],...extraHead(),['كود التقرير',S.h.code],['عدد الباليتات',A.pal],['إجمالي الكراتين',A.run],['إجمالي الوزن كجم',A.kg],[],COLS,...used().map(x=>[x.i,x.p,x.v,sizeExport(x),x.pk,x.c,x.b,x.g,x.loc,N(x.n),N(x.w),x.note])];return {aoa,sup:String(S.h.sup||'').trim(),raw:rawMap(),code:S.h.code,date:S.h.date,shift:S.h.shift,eng:S.h.eng,exp:expDisplay(S.h.exp),at:d.toTimeString().slice(0,5),rows:used().filter(r=>r.p||r.v||r.n),left:leftUsed().map(r=>({v:r.v||'',pk:r.pk||'',c:r.c||'',s:r.s||'',b:r.b||'',g:r.g||'',n:/^[1-9]\d*$/.test(lnum(r.n))?parseInt(lnum(r.n),10):0,w:parseFloat(lnum(r.w))||0,note:String(r.note||'').trim()}))}}
-function readyPdf(){const A=analyse();const e=[];if(!S.h.date)e.push('تاريخ الإنتاج ناقص');if(A.bad)e.push(A.bad+' رقم باليت غير صحيح');if(A.dups)e.push(A.dups+' سطر برقم باليت مكرر');const LA=leftAnalyse();if(LA.bad)e.push(LA.bad+' سطر نواقص فيه عدد كراتين أو وزن غلط');if(LA.hard)e.push(LA.hard+' سطر نواقص ناقص فيه الصنف أو المقاس أو عدد الكراتين');
+/* v38: نفس الشروط للـ PDF والإكسل — برنامج المحطة بيرفض الملف كله لو فيه باليت غلط/مكرر/من غير تاريخ، وكان بيسجل عدد كراتين سالب أو بكسور زي ما هو */
+function hardErr(){const A=analyse();const e=[];if(!S.h.date)e.push('تاريخ الإنتاج ناقص');if(A.bad)e.push(A.bad+' رقم باليت غير صحيح');if(A.dups)e.push(A.dups+' سطر برقم باليت مكرر');if(A.nbad)e.push(A.nbad+' باليت فيه عدد كراتين أو وزن غلط (العدد لازم رقم صحيح أكبر من صفر)');const LA=leftAnalyse();if(LA.bad)e.push(LA.bad+' سطر نواقص فيه عدد كراتين أو وزن غلط');if(LA.hard)e.push(LA.hard+' سطر نواقص ناقص فيه الصنف أو المقاس أو عدد الكراتين');return {A,LA,e}}
+function hardOk(){const {e}=hardErr();if(e.length){alert('مينفعش نطلع التقرير قبل تصليح:\n\n• '+e.join('\n• ')+'\n\n(برنامج المحطة بيرفض الملف كله لو فيه باليت غلط أو مكرر)');return false}return true}
+function readyPdf(){const {A,LA,e}=hardErr();
  if(e.length){alert('مينفعش نطلع التقرير قبل تصليح:\n\n• '+e.join('\n• ')+'\n\n(برنامج المحطة بيرفض الملف كله لو فيه باليت غلط أو مكرر)');return false}
  if(A.miss&&!confirm('فيه '+A.miss+' سطر بيانات ناقصة (باللون الأحمر). تطلع التقرير كده؟'))return false;if(LA.miss&&!LA.hard&&!confirm('فيه '+LA.miss+' سطر نواقص بيانات ناقصة (نوع الكرتون). تطلع التقرير كده؟'))return false;return true}
 $('bPrint').onclick=async()=>{if(!readyPdf())return;const d=repData();if(!d.rows.length&&!d.left.length)return alert('مفيش باليتات ولا نواقص مسجلة');$('busy').style.display='flex';
@@ -316,12 +321,12 @@ function makeXlsx(){const A=analyse();const R=[];let r=1;
  ['xl/_rels/workbook.xml.rels','<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/worksheet" Target="worksheets/sheet1.xml"/><Relationship Id="rId2" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/styles" Target="styles.xml"/>'+(two?'<Relationship Id="rId3" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/worksheet" Target="worksheets/sheet2.xml"/>':'')+'</Relationships>'],
  ['xl/styles.xml','<?xml version="1.0" encoding="UTF-8" standalone="yes"?><styleSheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main"><fonts count="3"><font><sz val="11"/><name val="Arial"/></font><font><b/><sz val="14"/><name val="Arial"/></font><font><b/><sz val="11"/><color rgb="FFFFFFFF"/><name val="Arial"/></font></fonts><fills count="3"><fill><patternFill patternType="none"/></fill><fill><patternFill patternType="gray125"/></fill><fill><patternFill patternType="solid"><fgColor rgb="FF2F5233"/></patternFill></fill></fills><borders count="1"><border><left/><right/><top/><bottom/><diagonal/></border></borders><cellStyleXfs count="1"><xf numFmtId="0" fontId="0" fillId="0" borderId="0"/></cellStyleXfs><cellXfs count="3"><xf numFmtId="0" fontId="0" fillId="0" borderId="0" xfId="0"/><xf numFmtId="0" fontId="1" fillId="0" borderId="0" xfId="0" applyFont="1"/><xf numFmtId="0" fontId="2" fillId="2" borderId="0" xfId="0" applyFont="1" applyFill="1"/></cellXfs><cellStyles count="1"><cellStyle name="Normal" xfId="0" builtinId="0"/></cellStyles></styleSheet>'],
  ['xl/worksheets/sheet1.xml',sheet]].concat(two?[['xl/worksheets/sheet2.xml',sheet2]]:[]))}
-$('bXlsx').onclick=()=>download(makeXlsx(),fname('xlsx'));
+$('bXlsx').onclick=()=>{if(!hardOk())return;download(makeXlsx(),fname('xlsx'))};
 function csv(){const A=analyse();const q=v=>'"'+String(v??'').replace(/"/g,'""')+'"';const o=[];
  [['تاريخ الإنتاج',S.h.date],['مهندس التشغيل',S.h.eng],['المُصدر',expDisplay(S.h.exp)],...extraHead(),['عدد الباليتات',A.pal],['إجمالي الكراتين',A.run],['إجمالي الوزن كجم',A.kg],[]].forEach(x=>o.push(x.map(q).join(',')));
  o.push(COLS.map(q).join(','));used().forEach(x=>o.push([x.i,x.p,x.v,sizeLabel(x),x.pk,x.c,x.b,x.g,x.loc,x.n,x.w,x.note].map(q).join(',')));
  return new Blob(['\ufeff'+o.join('\r\n')],{type:'text/csv;charset=utf-8'})}
-$('bShare').onclick=async()=>{
+$('bShare').onclick=async()=>{if(!hardOk())return;
  const ios=document.documentElement.classList.contains('ios');const title=reportTitle();const data=fl=>ios?{files:fl}:{files:fl,title,text:title};
  const can=fl=>{try{return !!(navigator.canShare&&navigator.canShare({files:fl}))}catch(e){return false}};
  const X='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet';
@@ -334,7 +339,7 @@ if(location.hash==='#demo'){S=blank();S.h.eng='م. أحمد';
 initHeader();renderRows();renderLeft();upd();
 if('serviceWorker' in navigator&&(location.protocol==='https:'||location.hostname==='localhost'))navigator.serviceWorker.register('sw.js').catch(()=>{});
 </script>
-<script src="pallet-pool.js?v=2"></script>
+<script src="pallet-pool.js?v=3"></script>
 <script>
 // ===== v34 autosave: every change saved at once on the phone (localStorage + IndexedDB, per day), restored after kill/reload/background/offline; days kept apart =====
 (function(){
