@@ -362,10 +362,13 @@ if('serviceWorker' in navigator&&(location.protocol==='https:'||location.hostnam
  // light archive of days in localStorage too (fallback if IndexedDB is missing)
  function lsDays(){try{return JSON.parse(localStorage.getItem(DK)||'{}')||{}}catch(e){return {}}}
  function lsDaysWrite(){try{const A=lsDays();if(S&&S._id&&hasData(S))A[S._id]=S;const lim=Date.now()-KEEP_DAYS*864e5;const ids=Object.keys(A).filter(k=>A[k]&&(A[k]._ts||0)>lim).sort((x,y)=>(A[y]._ts||0)-(A[x]._ts||0)).slice(0,20);const B={};ids.forEach(k=>B[k]=A[k]);localStorage.setItem(DK,JSON.stringify(B))}catch(e){}}
- save=function(){if(!S)return;if(!S._id)S._id=nid();S._ts=Date.now();let j;try{j=JSON.stringify(S)}catch(e){return}
+ let quiet=false;
+ save=function(){if(!S||quiet)return Promise.resolve(true);if(!S._id)S._id=nid();S._ts=Date.now();let j;try{j=JSON.stringify(S)}catch(e){return}
   try{localStorage.setItem(KEY,j);lsOk=true}catch(e){lsOk=false}
   lastAt=S._ts;show();clearTimeout(dt);dt=setTimeout(lsDaysWrite,400);
   return put(j,hasData(S)?S._id:null).then(ok=>{idbOk=ok;show();return ok})};
+ // v39: the app open in two tabs/windows on the same phone — a newer save of the same day from the other tab is taken over here, so this (older) tab can't overwrite it
+ window.addEventListener('storage',e=>{if(e.key!==KEY||!e.newValue)return;let x;try{x=JSON.parse(e.newValue)}catch(_){return}if(!x||!x.rows||!S||x._id!==S._id||(x._ts||0)<=(S._ts||0))return;S=x;if(!Array.isArray(S.left))S.left=[];quiet=true;try{redraw()}finally{quiet=false}lastAt=S._ts;show()});
  const soon=()=>setTimeout(save,0);
  document.addEventListener('input',soon,true);document.addEventListener('change',soon,true);document.addEventListener('click',()=>setTimeout(save,30),true);
  const bg=()=>{try{save();lsDaysWrite()}catch(e){}};
