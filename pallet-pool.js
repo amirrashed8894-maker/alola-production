@@ -26,6 +26,8 @@ async function flush(){if(busy){again=true;return}busy=true;try{
   if(P.pr.size){const nums=[...P.pr].filter(x=>!present().has(x));const x=await call('/api/pallets/release',{nums});nums.forEach(n=>P.pr.delete(n));take(x)}
   if(P.pc.size){const nums=[...P.pc];const x=await call('/api/pallets/claim',{nums});nums.forEach(n=>P.pc.delete(n));x.taken.forEach(n=>{P.conf.add(n);P.mine.delete(n);if(S.poolNums)S.poolNums=S.poolNums.filter(y=>y!==n)});take(x);if(x.taken.length){try{ptoast('⚠ الرقم '+x.taken.join('، ')+' اتاخد من موبايل تاني — غيّر رقم الباليت ده')}catch(e){}}}
   persist();
+  /* v4: a number on this report that was another phone's (flagged) and has since been freed is claimed now — before, it was never claimed and the pool could hand it to a third phone */
+  if(S&&Array.isArray(S.poolNums)){const pr=present();let need=false;P.conf.forEach(n=>{if(!P.srv.has(n)){P.conf.delete(n);need=true}});pr.forEach(n=>{if(!S.poolNums.includes(n)&&!takenByOther(n))need=true});if(need){persist();changed()}}
  }catch(e){P.on=false}finally{busy=false;paint();if(typeof upd==='function'&&P.conf.size)upd();if(again){again=false;setTimeout(flush,50)}}}
 /* ---------- reconcile the report with the pool (claim new numbers, free removed ones) ---------- */
 let rt=null;
