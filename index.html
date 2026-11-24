@@ -123,7 +123,7 @@ table.sum th{background:var(--g);color:#fff}
  <button class="btn3" id="bNew">يوم جديد</button>
 </div>
 <div id="busy">جاري عمل التقرير PDF…</div>
-<script src="html2canvas.min.js"></script><script src="jspdf.umd.min.js"></script><script src="sizes.js?v=2"></script><script src="prod-report.js?v=25"></script><script src="pdf-share.js?v=2"></script>
+<script src="html2canvas.min.js"></script><script src="jspdf.umd.min.js"></script><script src="sizes.js?v=2"></script><script src="prod-report.js?v=26"></script><script src="pdf-share.js?v=2"></script>
 <script>
 if(/iPad|iPhone|iPod/.test(navigator.userAgent)||(navigator.platform==='MacIntel'&&navigator.maxTouchPoints>1)||(/Safari/.test(navigator.userAgent)&&!/Chrome|Chromium|CriOS|Android/.test(navigator.userAgent)))document.documentElement.classList.add('ios');
 
@@ -240,10 +240,11 @@ function leftUsed(){return (S.left||[]).filter(lfilled)}
 function leftTot(){let n=0,kg=0;const bys={};leftUsed().forEach(r=>{const c=/^[1-9]\d*$/.test(lnum(r.n))?parseInt(lnum(r.n),10):0;const w=parseFloat(lnum(r.w))||0;n+=c;kg+=c*w;const k=r.s||'—';bys[k]=bys[k]||{n:0,kg:0};bys[k].n+=c;bys[k].kg+=c*w});return {n,kg:Math.round(kg*10)/10,bys,rows:leftUsed().length}}
 function leftAnalyse(){let miss=0,bad=0,hard=0;leftUsed().forEach(r=>{const o=lcheck(r);if(o.miss.length)miss++;if(o.miss.some(k=>k==='v'||k==='s'||k==='n'))hard++;if(o.nBad||o.wBad)bad++});return {miss,bad,hard}}
 function lsel(i,k,list,r){return `<div><div class="sl">${NAMES[k]}</div><select data-li="${i}" data-lk="${k}">${opts(list,r[k],'— اختار —')}</select></div>`}
-function lsizes(r){return rowSizes(r).filter(x=>x!=='MIX')}
+function lsizes(r){const L2=rowSizes(r);return L2?L2.filter(x=>x!=='MIX'):null}
+function lsizeField(i,r){if(!r.v)return lsel(i,'s',[],r);const L2=lsizes(r);if(L2===null)return `<div><div class="sl">${NAMES.s} — عدد الحبات بالصندوق</div><input data-li="${i}" data-lk="s" type="number" inputmode="numeric" min="1" step="1" placeholder="اكتب العدد" value="${esc(r.s)}"></div>`;return lsel(i,'s',L2,r)}
 function renderLeft(){if(!Array.isArray(S.left))S.left=[];
  $('lrows').innerHTML=S.left.length?S.left.map((r,i)=>`<div class="row lrow" id="l${i}"><div class="top"><span class="num" style="background:#b45309">ن${i+1}</span><span class="run" id="lrun${i}"></span><button type="button" class="btn3" style="padding:6px 12px;margin-inline-start:auto" data-lrm="${i}">حذف</button></div>
- <div class="rgrid3">${lsel(i,'v',L.variety,r)}${lsel(i,'pk',L.pack,r)}${lsel(i,'c',CTg(r),r)}${lsel(i,'s',r.v?lsizes(r):[],r)}${lsel(i,'b',BR(),r)}${lsel(i,'g',L.grade,r)}
+ <div class="rgrid3">${lsel(i,'v',L.variety,r)}${lsel(i,'pk',L.pack,r)}${lsel(i,'c',CTg(r),r)}${lsizeField(i,r)}${lsel(i,'b',BR(),r)}${lsel(i,'g',L.grade,r)}
  <div><div class="sl">عدد الكراتين</div><input data-li="${i}" data-lk="n" type="number" inputmode="numeric" min="1" step="1" value="${esc(r.n)}"></div>
  <div><div class="sl">وزن الكرتونة (كجم)</div><input data-li="${i}" data-lk="w" type="number" inputmode="decimal" min="0" step="0.1" value="${esc(r.w)}"></div></div>
  <div class="sl">ملاحظات</div><input data-li="${i}" data-lk="note" value="${esc(r.note)}">
@@ -255,7 +256,7 @@ function updLeft(){(S.left||[]).forEach((r,i)=>{const el=$('l'+i);if(!el)return;
  const T=leftTot();const ks=Object.keys(T.bys).sort((a,b)=>sizeSortKey(a)-sizeSortKey(b)||String(a).localeCompare(String(b),'ar'));
  $('lsum').innerHTML=T.rows?`<table style="width:100%;margin-top:8px;border-collapse:collapse;font-size:13px"><tr style="background:#fef3c7"><th style="padding:4px">المقاس</th><th>كراتين</th><th>وزن كجم</th></tr>${ks.map(k=>`<tr><td style="text-align:center" dir="ltr">${esc(k)}</td><td style="text-align:center">${T.bys[k].n}</td><td style="text-align:center">${r1(T.bys[k].kg)}</td></tr>`).join('')}<tr style="font-weight:700;border-top:2px solid #b45309"><td style="text-align:center">إجمالي النواقص</td><td style="text-align:center">${T.n}</td><td style="text-align:center">${T.kg}</td></tr></table>`:''}
 document.addEventListener('input',e=>{const t=e.target;if(t.dataset.li===undefined||t.tagName==='SELECT')return;const r=S.left[+t.dataset.li];if(!r)return;r[t.dataset.lk]=t.value;upd()});
-document.addEventListener('change',e=>{const t=e.target;if(t.dataset.li===undefined||t.tagName!=='SELECT')return;const i=+t.dataset.li,k=t.dataset.lk,r=S.left[i];if(!r)return;const oldW=wOf(r.c);r[k]=t.value;
+document.addEventListener('change',e=>{const t=e.target;if(t.dataset.li===undefined||t.tagName!=='SELECT')return;const i=+t.dataset.li,k=t.dataset.lk,r=S.left[i];if(!r)return;if((k==='v'||k==='c'||k==='pk')&&!guardChange(r,k,t.value)){t.value=r[k]||'';return}const oldW=wOf(r.c);r[k]=t.value;
  if(k==='v'||k==='pk'||k==='c'){if(k==='c'&&(!String(r.w||'').trim()||String(r.w)===String(oldW))){const w=wOf(r.c);const pk=rowPack(r);r.w=w||(pk&&pk.kg?String(pk.kg):r.w||'')}
   if(r.s&&!lsizes(r).includes(r.s))r.s='';if(r.c&&!CTg(r).includes(r.c)&&k!=='c')r.c='';save();renderLeft();upd();return}save();upd()});
 document.addEventListener('click',e=>{const t=e.target;if(t.dataset&&t.dataset.lrm!==undefined){const i=+t.dataset.lrm;const r=S.left[i];if(r&&lfilled(r)&&!confirm('حذف سطر النواقص رقم '+(i+1)+'؟'))return;S.left.splice(i,1);save();renderLeft();upd()}});
@@ -295,7 +296,7 @@ function sumTable(A){const ks=sumKeys(A);if(!ks.length)return '<div class="hint"
 $('addLeft').onclick=()=>{if(!Array.isArray(S.left))S.left=[];const last=S.left[S.left.length-1];S.left.push(last?{v:last.v,pk:last.pk,c:last.c,s:'',b:last.b,g:last.g,n:'',w:last.w,note:''}:{v:'',pk:'',c:'',s:'',b:'العلا',g:'',n:'',w:'',note:''});save();renderLeft();upd();const el=$('l'+(S.left.length-1));if(el)el.scrollIntoView({behavior:'smooth',block:'center'})};
 $('addRow').onclick=()=>{S.rows.push(er());renderRows();upd();const i=S.rows.length-1;$('r'+i).scrollIntoView({behavior:'smooth'});$('r'+i).querySelector('input').focus()};
 $('bNew').onclick=()=>{if(confirm('هتبدأ يوم جديد وهتمسح بيانات اليوم الحالي. اتأكد إنك بعت الملف الأول. متأكد؟')){S=blank(S.h.eng,S.h.exp);delete S.h.code;save();initHeader();renderRows();renderLeft();upd();scrollTo(0,0)}};
-function reportDay(){return S.h.date||new Date().toISOString().slice(0,10)}
+function reportDay(){return S.h.date||cairoDay()}
 /* v36: اسم الملف «انتاج العلا YYYY-MM-DD» (NFC) — نفس الاسم للـ PDF والإكسل وعنوان المشاركة */
 function reportTitle(date){const d=String(date??'').trim()||reportDay();return ('انتاج العلا '+d).normalize('NFC')}
 function asciiTitle(date){const d=String(date??'').trim()||reportDay();return 'Alola-Production-'+d.replace(/[^0-9A-Za-z-]+/g,'-')}
