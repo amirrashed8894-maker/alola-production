@@ -92,7 +92,14 @@ table.sum th{background:var(--g);color:#fff}
 .szb-card table.sztbl tr.z td{background:#f4f6f4}
 .szb-card table.sztbl tr.szvr td{background:#e8ece9;font-weight:800;text-align:right;padding:9px 8px}
 .szb-card table.sztbl tr.szvr b{font-weight:800;color:#222;font-size:15px}
-.szb-card table.sztbl tr.szvr i{font-style:normal;font-weight:800;color:var(--g);float:left;direction:ltr;font-size:15px}
+.szb-card table.sztbl tr.szvr i{font-style:normal;font-weight:700;color:var(--g);float:left;direction:rtl;text-align:left;font-size:13px;max-width:62%;line-height:1.3}
+.szb-card table.sztbl tr.szvr .szvl{font-weight:600;color:#555;font-size:12px}
+.szb-card table.sztbl tr.szvr .szvp{font-weight:800;color:var(--g);direction:ltr;unicode-bidi:isolate;margin-right:4px;font-size:15px}
+.szb-card table.sztbl tr.szvr .szvs{display:block;font-weight:600;color:#667;font-size:12px;margin-top:2px}
+.szb-card table.sztbl tr.szvt td{background:#f3f5f3;font-weight:800;color:#222}
+.szb-card table.sztbl tr.szvt td:first-child{text-align:right}
+.szb-card table.sztbl tr.szvt td.qn,.szb-card table.sztbl tr.szvt td.pc{text-align:center}
+.szb-card table.sztbl tr.szvt td.pc{color:var(--g)}
 .szb-card table.sztbl tr.szgt td{background:#eef1ee;font-weight:800;color:#222;border-top:2px solid #c5ccc7}
 .szb-card table.sztbl tr.szgt td:first-child{text-align:right}
 .szb-card table.sztbl tr.szgt td.qn,.szb-card table.sztbl tr.szgt td.pc{text-align:center}
@@ -162,7 +169,7 @@ table.sum th{background:var(--g);color:#fff}
  <button class="btn3" id="bNew">يوم جديد</button>
 </div>
 <div id="busy">جاري عمل التقرير PDF…</div>
-<script src="html2canvas.min.js"></script><script src="jspdf.umd.min.js"></script><script src="sizes.js?v=2"></script><script src="prod-report.js?v=27"></script><script src="pdf-share.js?v=2"></script>
+<script src="html2canvas.min.js"></script><script src="jspdf.umd.min.js"></script><script src="sizes.js?v=2"></script><script src="prod-report.js?v=28"></script><script src="pdf-share.js?v=2"></script>
 <script>
 if(/iPad|iPhone|iPod/.test(navigator.userAgent)||(navigator.platform==='MacIntel'&&navigator.maxTouchPoints>1)||(/Safari/.test(navigator.userAgent)&&!/Chrome|Chromium|CriOS|Android/.test(navigator.userAgent)))document.documentElement.classList.add('ios');
 
