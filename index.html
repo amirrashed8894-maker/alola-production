@@ -59,26 +59,27 @@ table.sum th{background:var(--g);color:#fff}
 .sl{font-size:11.5px;color:#777;margin:4px 0 2px}
 .szi{font-size:11px;color:#8a8a8a;margin-top:3px;line-height:1.35;min-height:0}.szi:empty{display:none}select:disabled,input:disabled{background:#f3f3f3;color:#999}small.szd{display:block;font-size:11px;color:#8a8a8a;font-weight:400}
 
-.szb-dock{display:flex;justify-content:flex-end;margin:0 0 12px}
+.szb-dock{margin:0 0 12px}
 .szb-dock.off{display:none}
-.szb-card{width:min(360px,100%);padding:8px 10px;border:1px solid #e4e8e5;box-shadow:0 1px 2px #0001}
-.szb-card .szb{border:0;background:transparent;padding:0;margin:0;font-size:13px;line-height:1.35}
-.szb-card .szt{font-weight:800;font-size:14px;color:var(--g);margin:0 0 6px}
-.szb-card .szt small{display:block;font-weight:500;color:#667;font-size:11px;margin:2px 0 0}
-.szb-card .szv{margin:0 0 8px;padding:0 0 6px;border-bottom:1px solid #eee}
-.szb-card .szv:last-of-type{margin:0;padding:0;border:0}
-.szb-card .szvh{display:flex;justify-content:space-between;align-items:baseline;gap:8px;margin:0 0 3px}
-.szb-card .szvh b{font-weight:800;color:#222;font-size:14px}
-.szb-card .szvh i{font-style:normal;font-weight:800;color:var(--g);font-size:15px}
-.szb-card .szg{margin:0 0 5px}
-.szb-card .szh{font-weight:600;color:#666;font-size:11.5px;margin:0 0 3px}
-.szb-card .szl{display:flex;flex-wrap:wrap;gap:5px}
-.szb-card .szi{display:inline-flex;align-items:baseline;gap:5px;white-space:nowrap;border:1px solid #e2e2e2;border-radius:8px;padding:3px 7px;background:#fafafa}
-.szb-card .szi b{font-weight:800;color:#222;font-size:14px}
-.szb-card .szi em{font-style:normal;font-weight:700;color:#222}
-.szb-card .szi i{font-style:normal;font-weight:800;color:var(--g);font-size:12.5px}
-.szb-card .szf{border-top:1px solid #e8e8e8;margin-top:4px;padding-top:6px;font-weight:700;color:#555;font-size:12.5px}
-.szb-card .szf b{color:#222}
+.szb-card{width:100%;padding:10px 10px 8px;border:1px solid #e4e8e5;box-shadow:0 1px 2px #0001}
+.szb-card .szb{border:0;background:transparent;padding:0;margin:0}
+.szb-card .szt{font-weight:800;font-size:16px;color:var(--g);margin:0 0 8px}
+.szb-card .szt small{display:block;font-weight:500;color:#667;font-size:12px;margin:3px 0 0}
+.szb-card table.sztbl{width:100%;border-collapse:collapse;table-layout:fixed}
+.szb-card table.sztbl th,.szb-card table.sztbl td{border:1px solid #d9dedb;padding:8px 6px;font-size:14px;line-height:1.35;vertical-align:middle}
+.szb-card table.sztbl thead th{background:#eef1ee;color:#222;font-weight:800;text-align:center;font-size:13px}
+.szb-card table.sztbl td.pk{text-align:right;font-weight:600;color:#222;word-break:break-word}
+.szb-card table.sztbl td.sz,.szb-card table.sztbl td.qn,.szb-card table.sztbl td.pc{text-align:center;font-weight:700;font-variant-numeric:tabular-nums;direction:ltr;unicode-bidi:isolate}
+.szb-card table.sztbl td.pc{font-weight:800;color:var(--g)}
+.szb-card table.sztbl tr.z td{background:#f4f6f4}
+.szb-card table.sztbl tr.szvr td{background:#e8ece9;font-weight:800;text-align:right;padding:9px 8px}
+.szb-card table.sztbl tr.szvr b{font-weight:800;color:#222;font-size:15px}
+.szb-card table.sztbl tr.szvr i{font-style:normal;font-weight:800;color:var(--g);float:left;direction:ltr;font-size:15px}
+.szb-card table.sztbl tr.szgt td{background:#eef1ee;font-weight:800;color:#222;border-top:2px solid #c5ccc7}
+.szb-card table.sztbl tr.szgt td:first-child{text-align:right}
+.szb-card table.sztbl tr.szgt td.qn,.szb-card table.sztbl tr.szgt td.pc{text-align:center}
+.szb-card table.sztbl col.c1{width:34%}.szb-card table.sztbl col.c2{width:16%}.szb-card table.sztbl col.c3{width:28%}.szb-card table.sztbl col.c4{width:22%}
+@media(max-width:420px){.szb-card table.sztbl th,.szb-card table.sztbl td{padding:7px 4px;font-size:13px}.szb-card table.sztbl thead th{font-size:12px}}
 .raw-warn{margin-top:8px;background:#fdecea;color:var(--bad);border-radius:10px;padding:8px 10px;font-size:13.5px;line-height:1.45;font-weight:600}
 .raw-warn[hidden],.raw-warn:empty{display:none}
 </style>
@@ -122,7 +123,7 @@ table.sum th{background:var(--g);color:#fff}
  <button class="btn3" id="bNew">يوم جديد</button>
 </div>
 <div id="busy">جاري عمل التقرير PDF…</div>
-<script src="html2canvas.min.js"></script><script src="jspdf.umd.min.js"></script><script src="sizes.js?v=2"></script><script src="prod-report.js?v=24"></script><script src="pdf-share.js?v=2"></script>
+<script src="html2canvas.min.js"></script><script src="jspdf.umd.min.js"></script><script src="sizes.js?v=2"></script><script src="prod-report.js?v=25"></script><script src="pdf-share.js?v=2"></script>
 <script>
 if(/iPad|iPhone|iPod/.test(navigator.userAgent)||(navigator.platform==='MacIntel'&&navigator.maxTouchPoints>1)||(/Safari/.test(navigator.userAgent)&&!/Chrome|Chromium|CriOS|Android/.test(navigator.userAgent)))document.documentElement.classList.add('ios');
 
