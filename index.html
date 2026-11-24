@@ -58,6 +58,20 @@ table.sum th{background:var(--g);color:#fff}
 .rgrid3{display:grid;grid-template-columns:1fr 1fr;gap:6px}
 .sl{font-size:11.5px;color:#777;margin:4px 0 2px}
 .szi{font-size:11px;color:#8a8a8a;margin-top:3px;line-height:1.35;min-height:0}.szi:empty{display:none}select:disabled,input:disabled{background:#f3f3f3;color:#999}small.szd{display:block;font-size:11px;color:#8a8a8a;font-weight:400}
+
+.szb-card{padding:10px 12px}
+.szb-card .szb{border:0;background:transparent;padding:0;margin:0;font-size:13.5px;line-height:1.35}
+.szb-card .szt{font-weight:800;font-size:15px;color:var(--g);margin:0 0 8px}
+.szb-card .szt small{display:block;font-weight:500;color:#667;font-size:11.5px;margin:2px 0 0}
+.szb-card .szg{margin:0 0 8px}
+.szb-card .szh{font-weight:700;color:#333;font-size:13px;margin:0 0 4px}
+.szb-card .szl{display:flex;flex-wrap:wrap;gap:6px}
+.szb-card .szi{display:inline-flex;align-items:baseline;gap:6px;white-space:nowrap;border:1px solid #e2e2e2;border-radius:9px;padding:5px 9px;background:#fafafa}
+.szb-card .szi b{font-weight:800;color:#222;font-size:15px}
+.szb-card .szi em{font-style:normal;font-weight:700;color:#222}
+.szb-card .szi i{font-style:normal;font-weight:800;color:var(--g);font-size:13px}
+.szb-card .szf{border-top:1px solid #e8e8e8;margin-top:4px;padding-top:6px;font-weight:700;color:#555;font-size:13px}
+.szb-card .szf b{color:#222}
 </style>
 <link rel="icon" href="icon-192.png"></head>
 <body>
@@ -75,6 +89,7 @@ table.sum th{background:var(--g);color:#fff}
   <div id="rawBox" class="rawbox"></div>
  </div>
  <div class="card alerts" id="alerts"></div>
+ <div class="card szb-card" id="sizeBox" style="display:none"></div>
  <div class="card"><h2>الباليتات</h2>
   <div class="hint"><b>الإدخال:</b> «+ باليتات جديدة» ← اختار المواصفة بالأزرار (أو دوسة على مواصفة قديمة) ← علّم أرقام الاستيكرات ← تأكيد. «↺ نفس آخر مواصفة» بيروح للأرقام على طول. أي باليت تقدر تعدّله أو تحذفه والرقم يرجع للقايمة.<br>كل باليت في كارت. رقم الباليت من الاستيكر: حرف P وبعده أرقام (مثال P0001 أو P-9001، لحد 12 حرف)، بيتحول كابيتال تلقائي. اختار <b>الصنف الأول</b>، بعدين نوع التعبئة ونوع الكرتون/الصندوق، وبعدها تظهر المقاسات المناسبة له بس (الأفندي: اكتب عدد الحبات بالصندوق). تحت المقاس بيظهر القطر ووزن الحبة التقريبي بخط خفيف. وزن الكرتونة بيتكتب لوحده من نوع الكرتون وتقدر تغيره. لو الباليت فيه أكثر من مقاس اختار MIX وسجّل عدد الكراتين لكل مقاس. المقاس تقدر تضيفه من «+ مقاس جديد»، واسم الكرتون من «+ اسم جديد».</div><br>
   <div id="pBar" class="pbar"><button class="btn" id="pAdd" type="button">+ باليتات جديدة</button></div>
@@ -97,7 +112,7 @@ table.sum th{background:var(--g);color:#fff}
  <button class="btn3" id="bNew">يوم جديد</button>
 </div>
 <div id="busy">جاري عمل التقرير PDF…</div>
-<script src="html2canvas.min.js"></script><script src="jspdf.umd.min.js"></script><script src="sizes.js?v=2"></script><script src="prod-report.js?v=21"></script><script src="pdf-share.js?v=2"></script>
+<script src="html2canvas.min.js"></script><script src="jspdf.umd.min.js"></script><script src="sizes.js?v=2"></script><script src="prod-report.js?v=22"></script><script src="pdf-share.js?v=2"></script>
 <script>
 if(/iPad|iPhone|iPod/.test(navigator.userAgent)||(navigator.platform==='MacIntel'&&navigator.maxTouchPoints>1)||(/Safari/.test(navigator.userAgent)&&!/Chrome|Chromium|CriOS|Android/.test(navigator.userAgent)))document.documentElement.classList.add('ios');
 
@@ -256,6 +271,7 @@ function upd(){
  if(!al.length)al.push(`<div class="a-ok">✓ كله سليم</div>`);
  $('alerts').innerHTML=(LT.rows?`<b>الباليتات: ${A.pal} باليت — ${A.run} كرتونة — ${A.kg} كجم<br>النواقص: ${LT.n} كرتونة — ${LT.kg} كجم<br>الإجمالي: ${A.run+LT.n} كرتونة — ${r1(A.kg+LT.kg)} كجم</b><br><br>`:`<b>عدد الباليتات: ${A.pal} — إجمالي الكراتين: ${A.run} — إجمالي الوزن: ${A.kg} كجم</b><br><br>`)+al.join('');
  $('summary').innerHTML=sumTable(A);
+ const sz=(window.PR&&PR.sizeShareHTML)?PR.sizeShareHTML(S.rows,S.left||[]):'';const box=$('sizeBox');if(box){box.innerHTML=sz;box.style.display=sz?'':'none'}
 }
 const r1=x=>Math.round(x*10)/10;
 function sumKeys(A){return Object.keys(A.sum).sort((a,b)=>A.sum[a].v.localeCompare(A.sum[b].v,'ar')||(sizeSortKey(A.sum[a].s)-sizeSortKey(A.sum[b].s))||String(A.sum[a].s).localeCompare(String(A.sum[b].s),'ar')||A.sum[a].c.localeCompare(A.sum[b].c,'ar'))}
