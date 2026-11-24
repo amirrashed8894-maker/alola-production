@@ -38,7 +38,7 @@ function reconcile(){if(!S)return;if(!Array.isArray(S.poolNums))S.poolNums=[];co
  if(ch){persist();try{save()}catch(e){}flush()}}
 function changed(){clearTimeout(rt);rt=setTimeout(reconcile,700)}
 /* ---------- spec completeness of a card ---------- */
-function specOk(r){if(!r||!r.v)return false;if(['v','s','pk','c','b','g','loc','n'].some(k=>!String(r[k]||'').trim()))return false;if(!/^[1-9]\d*$/.test(String(r.n).trim()))return false;if(r.s==='MIX'){const L=mixLines(r);if(L.length<2||new Set(L.map(x=>x.s)).size!==L.length||(parseInt(r.n)||0)!==mixSum(r))return false}return true}
+function specOk(r){if(!r||!r.v)return false;if(String(r.w??'').trim()&&!wOk(r.w))return false;if(['v','s','pk','c','b','g','loc','n'].some(k=>!String(r[k]||'').trim()))return false;if(!/^[1-9]\d*$/.test(String(r.n).trim()))return false;if(r.s==='MIX'){const L=mixLines(r);if(mixPartial(r)||L.length<2||new Set(L.map(x=>x.s)).size!==L.length||(parseInt(r.n)||0)!==mixSum(r))return false}return true}
 function rowHook(i){const b=document.getElementById('pk'+i);if(!b)return;const r=S.rows[i];const ok=specOk(r);b.disabled=!ok;b.textContent=ok?(r.p?'🔢 باليتات تانية بنفس المواصفة':'🔢 اختار أرقام الباليتات'):'🔢 أرقام الباليتات — كمّل المواصفة الأول'}
 /* ---------- v2 entry: one sheet → «المواصفة» (big chips, last spec prefilled, recent specs) → «الأرقام» (big buttons, range, +N) → «تأكيد» ---------- */
 let cur=null;
@@ -46,7 +46,7 @@ const RK='alola_pallet_specs',SK=['v','pk','c','s','mix','b','g','loc','n','w'];
 const specOf=r=>{const o={};SK.forEach(k=>{o[k]=k==='mix'?(r.s==='MIX'&&Array.isArray(r.mix)?JSON.parse(JSON.stringify(r.mix)):[]):String(r[k]??'')});return o};
 const specKey=o=>JSON.stringify(SK.map(k=>k==='mix'?(o.s==='MIX'?mixLines(o).map(x=>x.s+':'+x.n).join(','):''):o[k]));
 function recent(){let L=[];try{L=JSON.parse(localStorage.getItem(RK)||'[]')}catch(e){}if(!L.length){const cnt={};(S.rows||[]).forEach(r=>{if(r.p&&specOk(r)){const o=specOf(r),k=specKey(o);cnt[k]=cnt[k]||{o,n:0};cnt[k].n++}});L=Object.values(cnt).sort((a,b)=>b.n-a.n).map(x=>x.o)}const seen=new Set(),out=[];L.forEach(o=>{if(!specOk(o))return;const k=specKey(o);if(seen.has(k))return;seen.add(k);out.push(o)});return out.slice(0,6)}
-function remember(o){let L=[];try{L=JSON.parse(localStorage.getItem(RK)||'[]')}catch(e){}const k=specKey(o);L=[specOf(o)].concat(L.filter(x=>specKey(x)!==k)).slice(0,8);try{localStorage.setItem(RK,JSON.stringify(L))}catch(e){}}
+function remember(o){let L=[];try{L=JSON.parse(localStorage.getItem(RK)||'[]')}catch(e){}const k=specKey(o);const so=specOf(o);if(Array.isArray(so.mix))so.mix=so.mix.filter(x=>x&&x.s&&x.n);L=[so].concat(L.filter(x=>specKey(x)!==k)).slice(0,8);try{localStorage.setItem(RK,JSON.stringify(L))}catch(e){}}
 const css=`#pp{position:fixed;inset:0;z-index:300;background:#f4f6f4;display:flex;flex-direction:column}
 #pp .h{background:var(--g);color:#fff;padding:8px 12px;padding-top:max(8px,env(safe-area-inset-top));display:flex;align-items:center;gap:8px}
 #pp .h b{flex:1;font-size:17px}#pp .h button{background:#ffffff26;color:#fff;min-height:40px;padding:4px 12px;font-size:15px}
@@ -64,6 +64,7 @@ const css=`#pp{position:fixed;inset:0;z-index:300;background:#f4f6f4;display:fle
 #pp .num{display:flex;align-items:center;gap:8px}#pp .num input{flex:1;text-align:center;font-size:22px;font-weight:700;min-height:54px}
 #pp .num button{width:56px;min-height:54px;font-size:24px;background:#e8efe8;color:var(--g);padding:0}
 #pp .mixl{display:flex;align-items:center;gap:8px;margin-top:6px}#pp .mixl b{min-width:60px;text-align:center;background:var(--g);color:#fff;border-radius:10px;padding:10px 4px}#pp .mixl input{flex:1;min-height:48px;font-size:18px;text-align:center}
+#pp .mixl2{display:flex;gap:6px;margin-top:6px;align-items:stretch}#pp .mixl2 select{flex:1.3;min-width:0;min-height:48px;font-size:17px}#pp .mixl2 input{flex:1;min-width:0;min-height:48px;font-size:18px;text-align:center;font-weight:700}#pp .mixl2 button{width:44px;min-height:48px;background:#fdecea;color:var(--bad);font-size:20px;padding:0}#pp .mixadd2{width:100%;margin-top:8px;min-height:44px;background:#e8efe8;color:var(--g);font-weight:700}#pp .mixadd2:disabled{opacity:.45}#pp .mixw{margin-top:6px;font-size:13px;color:var(--bad)}#pp .mixh2{display:flex;gap:6px;margin-top:8px;font-size:12px;color:#667}#pp .mixh2 span:first-child{flex:1.3}#pp .mixh2 span:nth-child(2){flex:1;text-align:center}#pp .mixh2 i{width:44px}
 #pp .sum{background:#fff;margin:8px 12px 0;border-radius:12px;padding:7px 10px;font-size:13px;line-height:1.7;box-shadow:0 1px 3px #0002;display:flex;gap:8px;align-items:flex-start}
 #pp .sum .t{flex:1}#pp .sum span{display:inline-block;background:#e8efe8;color:var(--g);border-radius:8px;padding:0 7px;margin:1px 0 1px 4px;font-weight:600}
 #pp .sum button{min-height:34px;padding:2px 10px;font-size:13px;background:#fff;border:1.5px solid var(--g2);color:var(--g)}
@@ -96,7 +97,7 @@ const css=`#pp{position:fixed;inset:0;z-index:300;background:#f4f6f4;display:fle
 @keyframes ppf{0%{box-shadow:0 0 0 3px #4a7c50}100%{box-shadow:none}}.row.flash{animation:ppf 1.6s ease-out}`;
 const st=document.createElement('style');st.textContent=css;document.head.appendChild(st);
 function firstFreeBlock(u){let b=0;for(;b<500;b++){let free=false;for(let n=b*BLOCK+1;n<=(b+1)*BLOCK;n++)if(!u.has(fmt(n))){free=true;break}if(free)break}return b}
-function specText(r){const sz=r.s==='MIX'?sizeLabel(r):r.s;return [r.v,'مقاس '+sz,r.c,r.b,'درجة '+r.g,r.loc,r.n+' كرتونة'].filter(x=>x&&!/undefined/.test(x)).map(x=>'<span>'+esc(x)+'</span>').join('')}
+function specText(r){const sz=r.s==='MIX'?sizeLabel(r):r.s;return [r.v,'مقاس '+sz,r.c,r.b,'درجة '+r.g,r.loc,r.n+' كرتونة',(wNum(r.w)>0?wNum(r.w).toFixed(3)+' كجم/كرتونة':'')].filter(x=>x&&!/undefined/.test(x)).map(x=>'<span>'+esc(x)+'</span>').join('')}
 function rangesOf(list){const a=list.slice().sort((x,y)=>numOf(x)-numOf(y));const out=[];let s=null,p=null;a.forEach(x=>{const n=numOf(x);if(s!==null&&n===numOf(p)+1){p=x;return}if(s!==null)out.push(s===p?s:s+' → '+p);s=p=x});if(s!==null)out.push(s===p?s:s+' → '+p);return out.join('، ')}
 function mount(){let el=document.getElementById('pp');if(el)el.remove();el=document.createElement('div');el.id='pp';document.body.appendChild(el);const tt=document.getElementById('ptoast');if(tt)tt.style.display='none';return el}
 function startNums(spec,i){const u=used();const f=firstFreeBlock(u);cur={spec,i,step:'nums',sel:[],block:f,first:f,anchor:null,range:false,confirm:false};mount();draw();flush()}
@@ -114,7 +115,7 @@ function drawSpec(el){const W=cur.spec;const R=recent();const g=GOF(W.v);
  else if(sz===null)sizeHTML=`<div class="grp" id="g_s"><div class="gt"><span>عدد الحبات بالصندوق</span><b>${esc(W.s)}</b></div><div class="num"><input id="pps" type="number" inputmode="numeric" value="${esc(W.s)}" placeholder="العدد"></div></div>`;
  else if(g&&!sz.length)sizeHTML=`<div class="grp" id="g_s"><div class="gt"><span>المقاس</span></div><div class="hint">اختار نوع الكرتون الأول</div></div>`;
  else{const L2=sz.length?sz:SZ();sizeHTML=grp('المقاس','s',L2,W.s==='MIX'?'':W.s,chip('s','MIX',W.s==='MIX','MIX أكتر من مقاس')+'<button type="button" class="ch add" data-sadd="s">+ مقاس</button>');
-  if(W.s==='MIX'){const picked=(W.mix||[]).map(x=>x.s);sizeHTML=sizeHTML.replace(/<\/div><\/div>$/,'')+`</div><div class="gt" style="margin-top:8px"><span>دوس على المقاسات اللي في الباليت واكتب كراتين كل مقاس</span></div><div class="chips">${L2.map(x=>`<button type="button" class="ch${picked.includes(x)?' on':''}" data-mixs="${esc(x)}">${esc(x)}</button>`).join('')}</div>${(W.mix||[]).map((m,j)=>`<div class="mixl"><b>${esc(m.s)}</b><input type="number" inputmode="numeric" data-mixn="${j}" value="${esc(m.n)}" placeholder="كراتين"></div>`).join('')}<div class="hint" style="margin-top:6px">المجموع: ${mixSum(W)} كرتونة</div></div>`}}
+  if(W.s==='MIX'){const lines=W.mix=Array.isArray(W.mix)?W.mix:[];while(lines.length<2)lines.push({s:'',n:''});const ch=lines.map(x=>x.s).filter(Boolean);const dup=ch.length!==new Set(ch).size;sizeHTML=sizeHTML.replace(/<\/div><\/div>$/,'')+`</div><div class="gt" style="margin-top:8px"><span>تفصيل الباليت المكس — اختار المقاس واكتب كراتينه (لحد ${MIXMAX} مقاسات)</span></div><div class="mixh2"><span>المقاس</span><span>عدد الكراتين</span><i></i></div>${lines.map((m,j)=>`<div class="mixl2"><select data-mixsel="${j}" aria-label="مقاس ${j+1}">${opts(L2,m.s,'— المقاس —')}</select><input type="text" inputmode="numeric" pattern="[0-9]*" autocomplete="off" maxlength="4" data-mixn="${j}" value="${esc(m.n)}" placeholder="كراتين" aria-label="كراتين مقاس ${j+1}"><button type="button" data-mixrm="${j}" aria-label="شيل المقاس">×</button></div>`).join('')}<button type="button" class="mixadd2" data-mixadd="1"${lines.length>=MIXMAX?' disabled':''}>${lines.length>=MIXMAX?'وصلت لـ '+MIXMAX+' مقاسات (الحد الأقصى)':'+ مقاس كمان'}</button>${dup?'<div class="mixw">⚠ نفس المقاس متكرر — اختار مقاسات مختلفة</div>':''}<div class="hint" id="ppms" style="margin-top:6px">المجموع: ${mixSum(W)} كرتونة = عدد كراتين الباليت</div></div>`}}
  const nIsMix=W.s==='MIX';
  el.innerHTML=`<div class="h"><button type="button" data-pp="x">✕ إلغاء</button><b>باليتات جديدة</b></div>${steps('spec')}
  <div class="body">
@@ -127,17 +128,17 @@ function drawSpec(el){const W=cur.spec;const R=recent();const g=GOF(W.v);
  ${grp('الدرجة','g',L.grade,W.g)}
  ${grp('مكان التخزين','loc',L.loc,W.loc)}
  <div class="grp${!/^[1-9]\d*$/.test(String(W.n||'').trim())&&cur.tried?' need':''}" id="g_n"><div class="gt"><span>عدد الكراتين في الباليت</span>${nIsMix?'<b>من تفصيل MIX</b>':''}</div><div class="num"><button type="button" data-nd="-1">−</button><input id="ppnn" type="number" inputmode="numeric" value="${esc(W.n)}" ${nIsMix?'disabled':''} placeholder="العدد"><button type="button" data-nd="1">+</button></div>
- <div class="gt" style="margin-top:8px"><span>وزن الكرتونة (كجم)</span></div><div class="num"><input id="ppw" type="number" inputmode="decimal" step="0.1" value="${esc(W.w)}" style="font-size:18px;min-height:46px"></div></div>
+ <div class="gt" style="margin-top:8px"><span>وزن الكرتونة الأساسي — كيلو + جرام</span></div>${wBox('pp',W.w)}</div>
  </div>
  <div class="ft"><button type="button" class="btn go" data-pp="tonums" ${specOk(W)?'':'style="background:#9db59f"'}>${specOk(W)?'التالي: اختار الأرقام ←':'كمّل: '+missing(W).join('، ')}</button></div>`}
-function missing(W){const N={v:'الصنف',pk:'التعبئة',c:'الكرتون',s:'المقاس',b:'اسم الكرتون',g:'الدرجة',loc:'التخزين',n:'عدد الكراتين'};const m=Object.keys(N).filter(k=>!String(W[k]||'').trim()).map(k=>N[k]);if(String(W.n||'').trim()&&!/^[1-9]\d*$/.test(String(W.n).trim()))m.push('عدد الكراتين (رقم صحيح أكبر من صفر)');if(W.s==='MIX'&&(mixLines(W).length<2))m.push('مقاسين MIX على الأقل');return m}
+function missing(W){const N={v:'الصنف',pk:'التعبئة',c:'الكرتون',s:'المقاس',b:'اسم الكرتون',g:'الدرجة',loc:'التخزين',n:'عدد الكراتين'};const m=Object.keys(N).filter(k=>!String(W[k]||'').trim()).map(k=>N[k]);if(String(W.n||'').trim()&&!/^[1-9]\d*$/.test(String(W.n).trim()))m.push('عدد الكراتين (رقم صحيح أكبر من صفر)');if(W.s==='MIX'&&mixPartial(W))m.push('سطر MIX ناقص (المقاس وعدد كراتينه)');if(W.s==='MIX'&&(mixLines(W).length<2))m.push('مقاسين MIX على الأقل');if(W.s==='MIX'){const L=mixLines(W);if(new Set(L.map(x=>x.s)).size!==L.length)m.push('مقاسات MIX مختلفة')}if(String(W.w??'').trim()&&!wOk(W.w))m.push('وزن الكرتونة');return m}
 function setField(f,v){const W=cur.spec;
  if((f==='v'||f==='pk'||f==='c')&&window.ALS){W[f]=v;if(f==='v'){const g=GOF(v);if(g==='mand'&&!W.pk)W.pk='صندوق بلاستيك';if(g==='lemon'&&!W.pk)W.pk='كرتون'}
   if(W.c&&!CTg(W).includes(W.c))W.c='';
   if(f==='c'){const w=wOf(v);const pk=rowPack(W);W.w=w||(pk&&pk.kg?String(pk.kg):W.w)}
-  const sz=rowSizes(W);if(W.s&&W.s!=='MIX'&&sz&&sz.length&&!sz.includes(W.s)&&!(XL.size||[]).includes(W.s))W.s='';if(W.s==='MIX')W.mix=(W.mix||[]).filter(x=>!sz||sz.includes(x.s))}
+  const sz=rowSizes(W);if(W.s&&W.s!=='MIX'&&sz&&sz.length&&!sz.includes(W.s)&&!(XL.size||[]).includes(W.s))W.s='';if(W.s==='MIX')W.mix=(W.mix||[]).map(x=>(!x.s||!sz||sz.includes(x.s))?x:{s:'',n:x.n})}
  else W[f]=v;
- if(f==='s'&&v==='MIX'){W.mix=W.mix||[];W.n=String(mixSum(W)||'')}
+ if(f==='s'&&v==='MIX'){W.mix=Array.isArray(W.mix)?W.mix:[];while(W.mix.length<2)W.mix.push({s:'',n:''});W.n=String(mixSum(W)||'')}
  if(f==='s'&&v!=='MIX')W.mix=[]}
 function nextNeed(){const W=cur.spec;const order=['v','pk','c','s','b','g','loc','n'];const k=order.find(k=>!String(W[k]||'').trim()||(k==='n'&&!/^[1-9]\d*$/.test(String(W.n).trim())));return k?document.getElementById('g_'+k):null}
 function drawNums(el){const W=cur.spec;const u=used();const f0=firstFreeBlock(u);if(f0!==cur.first){if(cur.block===cur.first||cur.block<f0)cur.block=f0;cur.first=f0}
@@ -157,9 +158,9 @@ function drawNums(el){const W=cur.spec;const u=used();const f0=firstFreeBlock(u)
 function draw(){const el=document.getElementById('pp');if(!el||!cur)return;const y=(el.querySelector('.body')||el.querySelector('.grid')||{}).scrollTop||0;if(cur.step==='spec')drawSpec(el);else drawNums(el);const sc=el.querySelector('.body')||el.querySelector('.grid');if(sc&&cur.keep)sc.scrollTop=y;cur.keep=false}
 function addNext(n){const u=used();let start=cur.sel.length?Math.max(...cur.sel.map(numOf))+1:cur.block*BLOCK+1;let c=0;for(let x=start;c<n&&x<start+BLOCK*4;x++){const p=fmt(x);if(!u.has(p)&&!cur.sel.includes(p)){cur.sel.push(p);c++}}const last=cur.sel.length?Math.max(...cur.sel.map(numOf)):0;if(last>cur.block*BLOCK+BLOCK)cur.block=Math.floor((last-1)/BLOCK)}
 document.addEventListener('input',e=>{if(!cur||cur.step!=='spec')return;const t=e.target;const W=cur.spec;
- if(t.id==='ppnn'){W.n=t.value}else if(t.id==='ppw'){W.w=t.value}else if(t.id==='pps'){W.s=t.value}else if(t.dataset.mixn!==undefined){const m=W.mix[+t.dataset.mixn];if(m)m.n=t.value;W.n=String(mixSum(W)||'');const nn=document.getElementById('ppnn');if(nn)nn.value=W.n}else return;
+ if(t.id==='ppnn'){W.n=t.value}else if(t.id==='ppw'){W.w=t.value}else if(t.id==='pps'){W.s=t.value}else if(t.dataset.mixn!==undefined){const c=AD(t.value).replace(/\D/g,'');if(c!==t.value)t.value=c;const m=W.mix[+t.dataset.mixn];if(m)m.n=c;W.n=String(mixSum(W)||'');const nn=document.getElementById('ppnn');if(nn)nn.value=W.n;const ms=document.getElementById('ppms');if(ms)ms.textContent='المجموع: '+mixSum(W)+' كرتونة = عدد كراتين الباليت'}else if(t.dataset.mixsel!==undefined){const m=W.mix[+t.dataset.mixsel];if(m)m.s=t.value;W.n=String(mixSum(W)||'');cur.keep=true;draw();return}else return;
  const go=document.querySelector('#pp [data-pp="tonums"]');if(go){const ok=specOk(W);go.style.background=ok?'':'#9db59f';go.textContent=ok?'التالي: اختار الأرقام ←':'كمّل: '+missing(W).join('، ')}});
-document.addEventListener('click',e=>{const t=e.target.closest('[data-pp],[data-pc],[data-pick],[data-prm],[data-sf],[data-sadd],[data-rec],[data-mixs],[data-nd],[data-addn],#pAdd,#pLast');if(!t)return;
+document.addEventListener('click',e=>{const t=e.target.closest('[data-pp],[data-pc],[data-pick],[data-prm],[data-sf],[data-sadd],[data-rec],[data-mixs],[data-mixadd],[data-mixrm],[data-nd],[data-addn],#pAdd,#pLast');if(!t)return;
  if(t.id==='pAdd'){openNew();return}
  if(t.id==='pLast'){const R=recent();if(R[0]){if(window.askRawIfMissing&&!askRawIfMissing(R[0].v))return;startNums(JSON.parse(JSON.stringify(R[0])),null)}return}
  if(t.dataset.pick!==undefined){openRow(+t.dataset.pick);return}
@@ -169,6 +170,8 @@ document.addEventListener('click',e=>{const t=e.target.closest('[data-pp],[data-
  if(t.dataset.sf){setField(t.dataset.sf,t.dataset.sv);cur.keep=true;draw();const nx=nextNeed();if(nx&&t.dataset.sf!=='s')nx.scrollIntoView({block:'center',behavior:'smooth'});return}
  if(t.dataset.sadd){const f=t.dataset.sadd;let x='';if(f==='s')x=addCustomSize();else{x=(prompt(f==='b'?'اسم الكرتون الجديد:':'اسم نوع الكرتون الجديد (مثال: مقفول 10 ك):')||'').trim();if(x&&!isMaggiName(x)){const arr=f==='b'?XL.brand:XL.carton;if(!(f==='b'?BR():CT()).includes(x)){arr.push(x);saveXL()}}else x=''}if(x)setField(f,x);cur.keep=true;draw();return}
  if(t.dataset.mixs){const W=cur.spec;W.mix=W.mix||[];const j=W.mix.findIndex(m=>m.s===t.dataset.mixs);if(j<0)W.mix.push({s:t.dataset.mixs,n:''});else W.mix.splice(j,1);W.n=String(mixSum(W)||'');cur.keep=true;draw();return}
+ if(t.dataset.mixadd){const W=cur.spec;W.mix=W.mix||[];if(W.mix.length<MIXMAX)W.mix.push({s:'',n:''});cur.keep=true;draw();return}
+ if(t.dataset.mixrm!==undefined){const W=cur.spec;const j=+t.dataset.mixrm;if(W.mix.length<=2)W.mix[j]={s:'',n:''};else W.mix.splice(j,1);W.n=String(mixSum(W)||'');cur.keep=true;draw();return}
  if(t.dataset.nd){const W=cur.spec;if(W.s==='MIX')return;W.n=String(Math.max(1,(parseInt(W.n)||0)+(+t.dataset.nd)));const nn=document.getElementById('ppnn');if(nn)nn.value=W.n;nn&&nn.dispatchEvent(new Event('input',{bubbles:true}));return}
  if(t.dataset.addn){addNext(+t.dataset.addn);cur.keep=true;draw();return}
  if(t.dataset.pc){const p=t.dataset.pc;
@@ -189,7 +192,7 @@ document.addEventListener('click',e=>{const t=e.target.closest('[data-pp],[data-
  if(a==='mark'){const x=(prompt('اكتب الأرقام اللي اتسجلت قبل كده (مثال: P0001-P0150 أو P0007,P0009):')||'').toUpperCase().replace(/\s/g,'');if(!x)return;const set=dec(x.split(/[,،]/));if(!set.size||set.size>2000)return alert('الصيغة مش مفهومة');call('/api/pallets/claim',{nums:[...set],manual:true}).then(d=>{take(d);persist();draw();ptoast('اتعلّم '+set.size+' رقم مستخدم')}).catch(()=>alert('محتاج إنترنت علشان تعلّم الأرقام'));return}
  if(a==='go'){create();return}});
 function create(){const nums=cur.sel.slice().sort((x,y)=>numOf(x)-numOf(y));if(!nums.length)return;const before=JSON.stringify(S.rows);const made=[];let first,at;
- const mk=p=>{const o=Object.assign(er(),JSON.parse(JSON.stringify(cur.spec)));if(o.s!=='MIX')delete o.mix;o.p=p;return o};
+ const mk=p=>{const o=Object.assign(er(),JSON.parse(JSON.stringify(cur.spec)));if(o.s!=='MIX')delete o.mix;else o.mix=(o.mix||[]).filter(x=>x&&x.s&&x.n);o.w=wStr(o.w);o.p=p;return o};
  if(cur.i!=null){const r=S.rows[cur.i];first=at=cur.i;let rest=nums;if(!r.p){r.p=nums[0];made.push(r.p);rest=nums.slice(1)}const tpl=JSON.parse(JSON.stringify(r));rest.forEach(p=>{const c=JSON.parse(JSON.stringify(tpl));c.p=p;S.rows.splice(++at,0,c);made.push(p)})}
  else{let lastF=-1;S.rows.forEach((r,j)=>{if(filled(r))lastF=j});first=lastF+1;at=lastF;nums.forEach(p=>{S.rows.splice(++at,0,mk(p));made.push(p)})}
  let drop=made.length;for(let j=S.rows.length-1;j>at&&drop>0;j--){if(!filled(S.rows[j])){S.rows.splice(j,1);drop--}}
@@ -206,6 +209,8 @@ function paintBar(){const bar=document.getElementById('pBar');if(!bar)return;con
 function paint(){if(cur){cur.keep=true;draw()}}
 paintBar();
 
+/* v5: خانتين الوزن في شاشة «باليتات جديدة» */
+window.WSET_PP=v=>{if(!cur||cur.step!=='spec')return;cur.spec.w=v;const go=document.querySelector('#pp [data-pp="tonums"]');if(go){const ok=specOk(cur.spec);go.style.background=ok?'':'#9db59f';go.textContent=ok?'التالي: اختار الأرقام ←':'كمّل: '+missing(cur.spec).join('، ')}};
 window.POOL={changed,reconcile,flush,rowHook,takenByOther,specOk,used,_P:P,dec,enc};
 window.addEventListener('online',flush);document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible')flush()});
 setInterval(()=>{if(cur||Date.now()-P.at>5*60e3)flush()},60e3);
