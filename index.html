@@ -100,6 +100,22 @@ table.sum th{background:var(--g);color:#fff}
 @media(max-width:420px){.szb-card table.sztbl th,.szb-card table.sztbl td{padding:7px 4px;font-size:13px}.szb-card table.sztbl thead th{font-size:12px}}
 .raw-warn{margin-top:8px;background:#fdecea;color:var(--bad);border-radius:10px;padding:8px 10px;font-size:13.5px;line-height:1.45;font-weight:600}
 .raw-warn[hidden],.raw-warn:empty{display:none}
+
+.raw-card .hint{margin-bottom:8px;line-height:1.45}
+.raw-rows{display:flex;flex-direction:column;gap:10px;margin-top:4px}
+.raw-row{display:grid;grid-template-columns:minmax(0,1.2fr) minmax(0,1fr) 58px;gap:8px;align-items:end}
+.raw-row .sl{font-size:13px;font-weight:700;color:#444;margin:0 0 4px}
+.raw-row select,.raw-row input[data-raw]{min-height:58px;font-size:20px;font-weight:700;padding:10px 12px}
+.raw-row input[data-raw]{direction:ltr;text-align:left;letter-spacing:.3px;font-variant-numeric:tabular-nums}
+.raw-rm{min-width:58px;min-height:58px;padding:0;background:#fdecea;color:var(--bad);font-size:14px;font-weight:800;line-height:1.1}
+.raw-add{width:100%;margin-top:10px;font-size:18px;font-weight:800;min-height:54px}
+.raw-add:disabled{opacity:.45;cursor:default}
+@media(max-width:420px){
+ .raw-row{grid-template-columns:minmax(0,1fr) 58px;grid-template-areas:"v v" "q rm"}
+ .raw-row .raw-v{grid-area:v}
+ .raw-row .raw-q{grid-area:q}
+ .raw-rm{grid-area:rm;align-self:end}
+}
 </style>
 <link rel="icon" href="icon-192.png"></head>
 <body>
@@ -117,7 +133,7 @@ table.sum th{background:var(--g);color:#fff}
  </div>
  <div class="card raw-card" id="rawCard">
   <h2>الخام اللي تم تشغيله</h2>
-  <div class="hint">اكتب كمية الخام القائم (كجم) لكل صنف اتشغّل اليوم <b>قبل</b> تسجيل الباليتات. تقدر تعدّل الأرقام في أي وقت، وبتتحفظ تلقائي.</div>
+  <div class="hint">اختار الصنف واكتب الكمية بالكيلو في خانة واضحة <b>قبل</b> تسجيل الباليتات. الأرقام بتظهر بفاصل آلاف (مثال 25,000) عشان عدد الأصفار يبان. لو فيه صنف تاني دوس «+ إضافة صنف». تقدر تعدّل أو تمسح في أي وقت، وبتتحفظ تلقائي.</div>
   <div id="rawBox" class="rawbox"></div>
   <div id="rawWarn" class="raw-warn" hidden></div>
  </div>
@@ -192,22 +208,41 @@ const numOrText=v=>v===''||v==null?'':(isNaN(Number(v))?v:Number(v));
 function sizeExport(r){return r&&r.s==='MIX'?sizeLabel(r):numOrText(r&&r.s)}
 function initExp(){const el=$('exp');if(!S.h.exp)S.h.exp='العلا';const list=EXL().filter(x=>!isMaggiName(x));const kept=isMaggiName(S.h.exp);el.innerHTML=list.map(x=>`<option${!kept&&x===S.h.exp?' selected':''}>${esc(x)}</option>`).join('')+(kept?'<option value="__kept" selected>مصدر محفوظ</option>':(list.includes(S.h.exp)?'':`<option selected>${esc(S.h.exp)}</option>`))+'<option value="__new">+ مُصدر جديد…</option>';el.onchange=()=>{if(el.value==='__kept')return;if(el.value==='__new'){const x=(prompt('اسم المُصدر الجديد:')||'').trim();if(x&&!isMaggiName(x)){if(!EXL().includes(x)){XL.exporter.push(x);saveXL()}S.h.exp=x}else if(x&&isMaggiName(x)){alert('الاسم ده غير متاح')}initExp();save();upd();return}S.h.exp=el.value;save();upd()}}
 function initSup(){const el=$('sup');if(!el)return;$('supList').innerHTML=(XL.supplier||[]).map(x=>`<option value="${esc(x)}">`).join('');el.value=S.h.sup||'';el.oninput=()=>{S.h.sup=el.value;upd()};el.onchange=()=>{const v=String(el.value||'').trim();S.h.sup=v;if(v&&!(XL.supplier||[]).includes(v)){XL.supplier=[v].concat(XL.supplier||[]).slice(0,30);saveXL();initSup()}upd()}}
-/* الخام الداخل (كجم) لكل صنف موجود في التقرير */
-let rawKey=null;function rawVarieties(){const v=[];(S.rows||[]).forEach(r=>{if(r&&r.v&&!v.includes(r.v))v.push(r.v)});(S.left||[]).forEach(r=>{if(r&&r.v&&!v.includes(r.v))v.push(r.v)});return v}
-function rawFormVarieties(){const v=[];(L.variety||[]).forEach(x=>{if(x&&!v.includes(x))v.push(x)});Object.keys((S.h&&S.h.raw)||{}).forEach(x=>{if(x&&!v.includes(x))v.push(x)});rawVarieties().forEach(x=>{if(x&&!v.includes(x))v.push(x)});return v}
-function rawOf(v){const x=parseFloat(String((S.h&&S.h.raw||{})[v]??'').replace(/,/g,''));return (x>0&&isFinite(x))?x:0}
+/* الخام الداخل (كجم) — صفوف اختيار صنف + كمية، مخزّنة في S.h.raw[v] كرقم */
+let rawRows=null;
+const ARDIG='٠١٢٣٤٥٦٧٨٩';
+function parseRawQty(s){let t=String(s??'').trim().replace(/[٠-٩]/g,c=>String(ARDIG.indexOf(c))).replace(/٫/g,'.').replace(/[٬,،\s]/g,'');if(t===''||t==='.')return {empty:true,n:0,canon:''};if(!/^\d*\.?\d*$/.test(t))return {invalid:true};const n=parseFloat(t);if(!isFinite(n)||n<0)return {invalid:true};return {empty:false,n,canon:t}}
+function formatCanon(canon){const hasDot=canon.includes('.');let [a,b]=canon.split('.');a=String(a||'').replace(/^0+(?=\d)/,'');if(a==='')a='0';const g=a.replace(/\B(?=(\d{3})+(?!\d))/g,',');return hasDot?g+'.'+(b||''):g}
+function formatRawQty(s){const p=parseRawQty(s==null||s===''?'':String(s));return (p.invalid||p.empty)?'':formatCanon(p.canon)}
+function qtyCaret(oldVal,oldPos,newVal){const left=String(oldVal||'').slice(0,Math.max(0,oldPos|0)).replace(/[٠-٩]/g,c=>String(ARDIG.indexOf(c))).replace(/٫/g,'.').replace(/[٬,،\s]/g,'');const want=left.length;let seen=0;for(let i=0;i<=newVal.length;i++){if(seen>=want)return i;const ch=newVal[i];if(ch&&(/\d/.test(ch)||ch==='.'))seen++}return newVal.length}
+function rawVarieties(){const v=[];(S.rows||[]).forEach(r=>{if(r&&r.v&&!v.includes(r.v))v.push(r.v)});(S.left||[]).forEach(r=>{if(r&&r.v&&!v.includes(r.v))v.push(r.v)});return v}
+function rawFormVarieties(){const v=[];(L.variety||[]).forEach(x=>{if(x&&!v.includes(x))v.push(x)});Object.keys((S.h&&S.h.raw)||{}).forEach(x=>{if(x&&!v.includes(x))v.push(x)});rawVarieties().forEach(x=>{if(x&&!v.includes(x))v.push(x)});(rawRows||[]).forEach(r=>{if(r&&r.v&&!v.includes(r.v))v.push(r.v)});return v}
+function rawOf(v){const p=parseRawQty((S.h&&S.h.raw||{})[v]);return (!p.invalid&&p.n>0)?p.n:0}
+function pruneRaw(){if(!S.h.raw||typeof S.h.raw!=='object'){S.h.raw={};return}Object.keys(S.h.raw).forEach(v=>{const p=parseRawQty(S.h.raw[v]);if(p.invalid||p.empty||!(p.n>0))delete S.h.raw[v];else S.h.raw[v]=p.n})}
+function setRawVal(v,n){if(!S.h.raw||typeof S.h.raw!=='object')S.h.raw={};if(!v)return;if(n==null||n===''||!(Number(n)>0))delete S.h.raw[v];else S.h.raw[v]=Number(n)}
+function loadRawRows(){if(!S.h.raw||typeof S.h.raw!=='object')S.h.raw={};pruneRaw();const keys=[];rawFormVarieties().forEach(v=>{if(rawOf(v)>0&&!keys.includes(v))keys.push(v)});Object.keys(S.h.raw).forEach(v=>{if(rawOf(v)>0&&!keys.includes(v))keys.push(v)});rawRows=keys.map(v=>({v,q:formatRawQty(S.h.raw[v])}));if(!rawRows.length)rawRows=[{v:'',q:''}]}
+function ensureRawRow(v,n){v=String(v||'').trim();if(!v)return;setRawVal(v,n);const q=formatRawQty(n);if(!Array.isArray(rawRows))rawRows=[];const i=rawRows.findIndex(r=>r.v===v);if(i>=0){rawRows[i].q=q;return}const empty=rawRows.findIndex(r=>!r.v&&!parseRawQty(r.q).n);if(empty>=0){rawRows[empty]={v,q};return}rawRows.push({v,q})}
+function unusedRawVars(exceptI){const used=new Set((rawRows||[]).map((r,j)=>j===exceptI?'':(r&&r.v)||'').filter(Boolean));return rawFormVarieties().filter(v=>!used.has(v))}
+function rawSelectHTML(i,selected){const used=new Set((rawRows||[]).map((r,j)=>j===i?'':(r&&r.v)||'').filter(Boolean));const list=rawFormVarieties();const o=['<option value="">— اختار الصنف —</option>'];list.forEach(v=>{const dis=used.has(v)?' disabled':'';const sel=v===selected?' selected':'';o.push(`<option value="${esc(v)}"${sel}${dis}>${esc(v)}</option>`)});if(selected&&!list.includes(selected))o.push(`<option value="${esc(selected)}" selected>${esc(selected)}</option>`);return `<select data-rawv="${i}" aria-label="صنف الخام">${o.join('')}</select>`}
+function commitRawRow(row){if(!row||!row.v)return;const p=parseRawQty(row.q);if(p.invalid||p.empty||!(p.n>0))setRawVal(row.v,null);else setRawVal(row.v,p.n)}
+function applyRawQty(el){const i=+el.dataset.rawi;const row=rawRows&&rawRows[i];if(!row)return;const start=el.selectionStart;const before=el.value;const p=parseRawQty(before);if(p.invalid){el.value=row.q||'';return}const formatted=p.empty?'':formatCanon(p.canon);row.q=formatted;el.value=formatted;try{const np=qtyCaret(before,start,formatted);el.setSelectionRange(np,np)}catch(e){}commitRawRow(row);upd()}
+function changeRawVariety(i,newV){const row=rawRows[i];if(!row)return;newV=String(newV||'').trim();const oldV=row.v||'';if(newV===oldV)return;if(newV&&(rawRows||[]).some((r,j)=>j!==i&&r.v===newV)){alert('الصنف «'+newV+'» متسجل في خانة تانية. اختار صنف مختلف.');renderRaw(true);return}const p=parseRawQty(row.q);const hasQty=p.n>0||(oldV&&rawOf(oldV)>0);if(hasQty&&oldV&&newV){if(!confirm('هتنقل كمية الخام ('+(row.q||formatRawQty(rawOf(oldV)))+' كجم) من «'+oldV+'» إلى «'+newV+'». الكمية مش هتتمسح. تمام؟')){renderRaw(true);return}}if(hasQty&&oldV&&!newV){if(!confirm('هتشيل الصنف «'+oldV+'» من الخام، والكمية هتفضل في الخانة لحد ما تختار صنف تاني. تمام؟')){renderRaw(true);return}}if(oldV)setRawVal(oldV,null);row.v=newV;commitRawRow(row);save();renderRaw(true);upd()}
+function removeRawRow(i){const row=rawRows[i];if(!row)return;const p=parseRawQty(row.q);const has=p.n>0||(row.v&&rawOf(row.v)>0);if(has&&!confirm('هتمسح خانة الخام'+(row.v?' لصنف «'+row.v+'»':'')+(has?' (الكمية '+(row.q||formatRawQty(p.n))+' كجم)':'')+'؟ البيانات دي هتتشال من اليوم.'))return;if(row.v)setRawVal(row.v,null);rawRows.splice(i,1);if(!rawRows.length)rawRows=[{v:'',q:''}];save();renderRaw(true);upd()}
+function addRawRow(){if(!Array.isArray(rawRows))loadRawRows();if(!unusedRawVars(-1).length){try{ptoast('كل الأصناف اتضافت. تقدر تعدّل الخانات الموجودة.')}catch(e){}return}rawRows.push({v:'',q:''});renderRaw(true);const box=$('rawBox');const sel=box&&box.querySelector('.raw-row:last-child select');if(sel)sel.focus()}
 function askRawIfMissing(v){v=String(v||'').trim();if(!v||rawOf(v)>0)return true;
  const x=prompt('اكتب كمية الخام اللي اتشغّل لصنف «'+v+'» (كجم).\nيفضّل تتكتب قبل الباليتات، وتقدر تعدّلها بعدين من خانة الخام فوق.');
  if(x==null){try{ptoast('تقدر تكتب كمية الخام من الخانة فوق في أي وقت — البيانات محفوظة')}catch(e){}return true}
- const n=parseFloat(String(x).replace(/,/g,'').trim());
- if(!(n>0)||!isFinite(n)){alert('كمية الخام لازم رقم أكبر من صفر');return askRawIfMissing(v)}
- if(!S.h.raw||typeof S.h.raw!=='object')S.h.raw={};S.h.raw[v]=String(n);
- try{save();renderRaw(true);upd()}catch(e){}return true}
-window.askRawIfMissing=askRawIfMissing;window.rawOf=rawOf;
-function renderRaw(force){const box=$('rawBox');if(!box)return;const vs=rawFormVarieties();const key=vs.join('|');if(!force&&key===rawKey)return;rawKey=key;if(!S.h.raw||typeof S.h.raw!=='object')S.h.raw={};
- box.innerHTML=`<label>الكمية بالكيلوجرام (وزن قائم)<small style="font-weight:400;color:#64748b"> — املأ الأصناف اللي اتشغّلت اليوم</small></label><div class="grid2">${vs.map(v=>`<div><div class="sl">${esc(v)}</div><input data-raw="${esc(v)}" type="number" inputmode="decimal" min="0" step="1" placeholder="مثال: 51000" value="${esc(S.h.raw[v]??'')}"></div>`).join('')}</div>`;
- box.querySelectorAll('[data-raw]').forEach(el=>{el.oninput=()=>{if(!S.h.raw||typeof S.h.raw!=='object')S.h.raw={};S.h.raw[el.dataset.raw]=el.value;upd()}})}
-function initHeader(){initExp();initSup();renderRaw(true);if(!S.h.shift)S.h.shift='صباحي';['date','eng','shift'].forEach(k=>{const el=$(k);el.value=S.h[k]||'';el.oninput=el.onchange=()=>{S.h[k]=el.value;if(k==='date'&&syncCode())ptoast('اتغير تاريخ الإنتاج ← كود تقرير جديد '+S.h.code);upd()}})}
+ const p=parseRawQty(x);if(p.invalid||p.empty||!(p.n>0)){alert('كمية الخام لازم رقم أكبر من صفر');return askRawIfMissing(v)}
+ try{ensureRawRow(v,p.n);save();renderRaw(true);upd()}catch(e){}return true}
+window.askRawIfMissing=askRawIfMissing;window.rawOf=rawOf;window.parseRawQty=parseRawQty;window.formatRawQty=formatRawQty;window.loadRawRows=loadRawRows;window.ensureRawRow=ensureRawRow;
+function renderRaw(force){const box=$('rawBox');if(!box)return;if(!Array.isArray(rawRows))loadRawRows();if(!force&&box.querySelector('.raw-row'))return;
+ const canAdd=unusedRawVars(-1).length>0;
+ box.innerHTML=`<div class="raw-rows">${rawRows.map((r,i)=>`<div class="raw-row" data-rawrow="${i}"><div class="raw-v"><div class="sl">الصنف</div>${rawSelectHTML(i,r.v)}</div><div class="raw-q"><div class="sl">الكمية (كجم)</div><input data-raw="${esc(r.v||'')}" data-rawi="${i}" type="text" inputmode="decimal" autocomplete="off" enterkeyhint="next" placeholder="مثال: 25,000" value="${esc(r.q||'')}"></div><button type="button" class="raw-rm" data-rawrm="${i}" aria-label="حذف خانة الخام">حذف</button></div>`).join('')}</div><button type="button" class="btn2 raw-add" id="rawAdd"${canAdd?'':' disabled'}>+ إضافة صنف</button>`;
+ box.querySelectorAll('input[data-rawi]').forEach(el=>{el.oninput=()=>applyRawQty(el);el.onblur=()=>{const row=rawRows[+el.dataset.rawi];if(!row)return;const p=parseRawQty(el.value);el.value=row.q=p.invalid||p.empty?'':formatCanon(p.canon);commitRawRow(row);upd()}});
+ box.querySelectorAll('select[data-rawv]').forEach(el=>{el.onchange=()=>changeRawVariety(+el.dataset.rawv,el.value)});
+ box.querySelectorAll('[data-rawrm]').forEach(el=>{el.onclick=()=>removeRawRow(+el.dataset.rawrm)});
+ const add=$('rawAdd');if(add)add.onclick=addRawRow}
+function initHeader(){initExp();initSup();loadRawRows();renderRaw(true);if(!S.h.shift)S.h.shift='صباحي';['date','eng','shift'].forEach(k=>{const el=$(k);el.value=S.h[k]||'';el.oninput=el.onchange=()=>{S.h[k]=el.value;if(k==='date'&&syncCode())ptoast('اتغير تاريخ الإنتاج ← كود تقرير جديد '+S.h.code);upd()}})}
 function sel(i,k,list,r){return `<div><div class="sl">${NAMES[k]}</div><select data-i="${i}" data-k="${k}">${opts(list,r[k],'— اختار —')}</select></div>`}
 function sizeSelect(i,r){const g=GOF(r.v),list=rowSizes(r);const info=`<div class="szi" id="szi${i}">${szInfoHTML(r)}</div>`;
  if(!r.v)return `<div><div class="sl">${NAMES.s}</div><select data-i="${i}" data-k="s" disabled>${r.s?opts([],r.s==='MIX'?'MIX':r.s,''):'<option>اختار الصنف الأول</option>'}</select>${info}</div>`;
@@ -339,7 +374,7 @@ function fname(ext){return reportTitle()+'.'+ext}
 const used=()=>S.rows.map((r,i)=>({...r,i:i+1})).filter(filled);
 const COLS=['م','رقم الباليت','الصنف','المقاس','نوع التعبئة','نوع الكرتون','اسم الكرتون','الدرجة','مكان التخزين','عدد الكراتين','وزن الكرتونة (كجم)','ملاحظات'];
 /* ---------- PDF v9 ---------- */
-function rawMap(){const o={};const vs=rawVarieties();vs.forEach(v=>{const x=parseFloat(String((S.h.raw||{})[v]??'').replace(/,/g,''));if(x>0)o[v]=x});return o}
+function rawMap(){const o={};const vs=rawVarieties();vs.forEach(v=>{const x=rawOf(v);if(x>0)o[v]=x});return o}
 function extraHead(){const o=[];const sp=String(S.h.sup||'').trim();if(sp)o.push(['اسم المورد',sp]);const m=rawMap();const t=Object.values(m).reduce((a,b)=>a+b,0);if(t>0)o.push(['الخام الداخل كجم',Math.round(t*10)/10]);return o}
 function repData(){if(!S.h.code){S.h.code=prCode(S.h.date);save()}else syncCode();
  const d=new Date();const A=analyse(),N=v=>v===''||v==null?'':(isNaN(Number(v))?v:Number(v));const aoa=[['الإنتاج اليومي — شركة العلا لفرز الحاصلات الزراعية'],[],['تاريخ الإنتاج',S.h.date],['مهندس التشغيل',S.h.eng],['المُصدر',expDisplay(S.h.exp)],['الوردية',S.h.shift||''],...extraHead(),['كود التقرير',S.h.code],['عدد الباليتات',A.pal],['إجمالي الكراتين',A.run],['إجمالي الوزن كجم',A.kg],[],COLS,...used().map(x=>[x.i,x.p,x.v,sizeExport(x),x.pk,x.c,x.b,x.g,x.loc,N(x.n),N(x.w),x.note])];return {aoa,sup:String(S.h.sup||'').trim(),raw:rawMap(),code:S.h.code,date:S.h.date,shift:S.h.shift,eng:S.h.eng,exp:expDisplay(S.h.exp),at:d.toTimeString().slice(0,5),rows:used().filter(r=>r.p||r.v||r.n),left:leftUsed().map(r=>({v:r.v||'',pk:r.pk||'',c:r.c||'',s:r.s||'',b:r.b||'',g:r.g||'',n:/^[1-9]\d*$/.test(lnum(r.n))?parseInt(lnum(r.n),10):0,w:parseFloat(lnum(r.w))||0,note:String(r.note||'').trim()}))}}
