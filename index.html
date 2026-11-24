@@ -43,6 +43,8 @@ button{font-family:inherit;font-size:16px;min-height:48px;border:0;border-radius
 table.sum{width:100%;border-collapse:collapse;font-size:15px}
 table.sum th,table.sum td{border:1px solid #ddd;padding:8px;text-align:center}
 table.sum th{background:var(--g);color:#fff}
+@media(max-width:420px){.sum{font-size:13px;table-layout:fixed}.sum th,table.sum td{padding:6px 2px;word-break:break-word;overflow-wrap:anywhere}.sum small{font-size:10px}}
+#svbar{min-width:0;max-width:100%;flex-wrap:wrap}#svbar #svd{min-width:0;overflow-wrap:anywhere}
 .alerts div{padding:8px 10px;border-radius:10px;margin-bottom:6px;font-size:14px}
 .a-bad{background:#fdecea;color:var(--bad)}.a-ok{background:#e6f4ea;color:#137333}
 .hint{font-size:12.5px;color:#777}
@@ -58,6 +60,14 @@ table.sum th{background:var(--g);color:#fff}
 .rgrid3{display:grid;grid-template-columns:1fr 1fr;gap:6px}
 .sl{font-size:11.5px;color:#777;margin:4px 0 2px}
 .szi{font-size:11px;color:#8a8a8a;margin-top:3px;line-height:1.35;min-height:0}.szi:empty{display:none}select:disabled,input:disabled{background:#f3f3f3;color:#999}small.szd{display:block;font-size:11px;color:#8a8a8a;font-weight:400}
+.wcell{grid-column:1/-1}.wbx{border:1.5px solid #d6e3d7;border-radius:12px;padding:8px;background:#fbfdfb}
+.wbr{display:flex;gap:8px;direction:ltr}.wf{flex:1;display:flex;align-items:stretch;min-width:0;margin:0}
+.wf input{flex:1;min-width:0;text-align:center;font-size:20px;font-weight:700;border-radius:10px 0 0 10px;letter-spacing:1px}
+.wf span{display:flex;align-items:center;padding:0 10px;background:#e8efe8;border:1.5px solid #ccc;border-left:0;border-radius:0 10px 10px 0;font-weight:800;color:var(--g);font-size:15px;white-space:nowrap}
+.wf.g span{background:#fff6dc;color:#7a5a00}.wf.g input{background:#fffdf5}
+.wst{display:flex;align-items:center;gap:8px;margin-top:8px}.wst button{min-height:42px;padding:4px 10px;background:#e8efe8;color:var(--g);font-weight:700;font-size:14px;white-space:nowrap}
+.wtot{flex:1;text-align:center;font-size:15px;color:var(--g)}.wtot.bad{color:var(--bad)}.wtot bdi{font-weight:800}
+.mixadd:disabled{opacity:.45}
 </style>
 <link rel="icon" href="icon-192.png"></head>
 <body>
@@ -119,7 +129,18 @@ const $=id=>document.getElementById(id);
 const esc=s=>String(s??'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
 function opts(list,val,ph){let h=`<option value="">${ph}</option>`+list.map(x=>`<option${x===val?' selected':''}>${esc(x)}</option>`).join('');if(val&&!list.includes(val))h+=`<option selected>${esc(val)}</option>`;return h}
 const VALID=/^(?=.*\d)P[A-Z0-9-]{1,11}$/;
-const wOf=c=>{const m=String(c).match(/(\d+(?:\.\d+)?)\s*ك/);return m?m[1]:''};
+/* v40 وزن الكرتونة: خانة «كجم» + خانة «جرام» (أرقام صحيحة بس). خانة الرقم العشري (type=number) على الموبايل كانت بتشيل الفاصلة: «7,150» → 7150، «7٫5» → 75 أو فاضية، والأرقام العربي → فاضية. كل قراية للوزن بتعدي على wNum (أرقام عربي، ٫ و , = علامة عشرية) */
+const AD=s=>String(s??'').replace(/[٠-٩]/g,d=>'٠١٢٣٤٥٦٧٨٩'.indexOf(d)).replace(/[۰-۹]/g,d=>'۰۱۲۳۴۵۶۷۸۹'.indexOf(d));
+const WMAX=100;
+function wNum(v){if(typeof v==='number')return isFinite(v)?v:NaN;const s=AD(v).replace(/\s/g,'').replace(/[٫,،]/g,'.');if(!s)return NaN;if(!/^(\d+\.?\d*|\.\d+)$/.test(s))return NaN;return parseFloat(s)}
+const wOk=v=>{const n=wNum(v);return n>0&&n<WMAX};
+function wStr(v){const n=wNum(v);if(!(n>=0))return String(v??'').trim();const G=Math.round(n*1000),k=Math.floor(G/1000),g=G%1000;return g?k+'.'+String(g).padStart(3,'0').replace(/0+$/,''):String(k)}
+function wParts(v){const n=wNum(v);if(!(n>=0))return {k:'',g:''};const G=Math.round(n*1000);return {k:String(Math.floor(G/1000)),g:String(G%1000)}}
+const wX=v=>{const n=wNum(v);return n>=0?Math.round(n*1000)/1000:(String(v??'').trim()===''?'':v)};
+function wTot(v){const raw=String(v??'').trim();if(!raw)return {t:'اكتب الكيلو والجرام',bad:false};const n=wNum(v);if(!(n>=0))return {t:'⚠ الوزن مش مفهوم: «'+raw+'» — اكتبه تاني',bad:true};if(!(n>0))return {t:'⚠ الوزن لازم أكبر من صفر',bad:true};return {t:'= <bdi dir="ltr">'+n.toFixed(3)+'</bdi> كجم للكرتونة'+(n>=WMAX?' ⚠ كبير أوي — غالبًا الفاصلة اتشالت، اكتبه تاني':''),bad:n>=WMAX}}
+function wBox(t,v){const p=wParts(v),T=wTot(v);return `<div class="wbx" data-wt="${t}"><div class="wbr"><label class="wf"><input class="wk" data-wk="${t}" inputmode="numeric" pattern="[0-9]*" autocomplete="off" maxlength="2" value="${esc(p.k)}" placeholder="0" aria-label="الكيلو"><span>كجم</span></label><label class="wf g"><input class="wg" data-wg="${t}" inputmode="numeric" pattern="[0-9]*" autocomplete="off" maxlength="3" value="${esc(p.g)}" placeholder="000" aria-label="الجرام"><span>جرام</span></label></div><div class="wst"><button type="button" data-wd="-10" data-wt="${t}" aria-label="ناقص 10 جرام">− 10 جم</button><span class="wtot${T.bad?' bad':''}">${T.t}</span><button type="button" data-wd="10" data-wt="${t}" aria-label="زيادة 10 جرام">+ 10 جم</button></div></div>`}
+const wMsg=v=>{const n=wNum(v);return n>=WMAX?'وزن الكرتونة مش منطقي ('+wStr(v)+' كجم) — غالبًا الفاصلة اتشالت: اكتبه تاني في خانة الكجم وخانة الجرام':'وزن الكرتونة لازم رقم أكبر من صفر'};
+const wOf=c=>{const m=AD(c).match(/(\d+(?:[.,٫]\d+)?)\s*ك/);return m?wStr(m[1]):''};
 const XK='alola_production_extra';let XL={};try{XL=JSON.parse(localStorage.getItem(XK))||{}}catch(e){}XL.carton=XL.carton||[];XL.exporter=XL.exporter||[];XL.brand=XL.brand||[];XL.size=XL.size||[];const saveXL=()=>{try{localStorage.setItem(XK,JSON.stringify(XL))}catch(e){}};
 const isMaggiName=s=>/ماجي|maggi/i.test(String(s||''));
 function expDisplay(x){const s=String(x??'').trim();if(!s)return 'العلا';return isMaggiName(s)?'مصدر محفوظ':s}
@@ -132,9 +153,10 @@ const GOF=v=>window.ALS?ALS.groupOf(v):'';
 function rowPack(r){const g=GOF(r.v);return g&&window.ALS?ALS.packOf(g,r.c,r.pk):null}
 function rowSizes(r){const g=GOF(r.v);if(!r.v)return [];if(!g||!window.ALS)return SZ();return ALS.sizesFor(g,rowPack(r))}
 function CTg(r){const g=GOF(r.v);if(!g||!window.ALS)return CT();const L2=ALS.packsFor(g).filter(p=>!r.pk||p.pk===r.pk).map(p=>p.carton);return [...new Set((L2.length?L2:ALS.packsFor(g).map(p=>p.carton)).concat(XL.carton))]}
-function szInfo(r,s,cnt){const g=GOF(r.v);if(!g||!window.ALS||!s||s==='MIX')return '';const pk=rowPack(r);const w=parseFloat(r.w)||0;const o=ALS.info(g,pk,s,pk&&pk.kg?(w||pk.kg):w);return ALS.text(o)}
+function szInfo(r,s,cnt){const g=GOF(r.v);if(!g||!window.ALS||!s||s==='MIX')return '';const pk=rowPack(r);const w=wNum(r.w)||0;const o=ALS.info(g,pk,s,pk&&pk.kg?(w||pk.kg):w);return ALS.text(o)}
 function szInfoHTML(r){if(r.s==='MIX'){return mixLines(r).map(x=>{const t=szInfo(r,x.s);return t?x.s+': '+t:''}).filter(Boolean).join('<br>')}const t=szInfo(r,r.s);if(t)return t;const g=GOF(r.v);if(r.v&&g==='mand'&&!rowPack(r))return 'اختار وزن الصندوق (2 / 5 / 7 / 10 ك) علشان يتحسب القطر ووزن الحبة';return ''}
 const CT=()=>[...new Set(L.carton.concat(XL.carton))],EXL=()=>[...new Set(L.exporter.concat(XL.exporter))],BR=()=>[...new Set(L.brand.concat(XL.brand))];
+const MIXMAX=5;/* v40: لحد 5 مقاسات في الباليت المكس */
 function mixLines(r){return (Array.isArray(r.mix)?r.mix:[]).map(x=>{const s=String(x&&x.s||'').trim();const n=String(x&&x.n||'').trim();if(!SZ().includes(s)||!/^[1-9]\d*$/.test(n))return null;return {s,n:parseInt(n,10)}}).filter(Boolean)}
 function mixSum(r){return mixLines(r).reduce((a,x)=>a+x.n,0)}
 function sizeLabel(r){if(!r||r.s!=='MIX')return r&&r.s||'';const lines=mixLines(r);return lines.length?('MIX ('+lines.map(x=>x.s+'×'+x.n).join('، ')+')'):'MIX'}
@@ -156,14 +178,14 @@ function sizeSelect(i,r){const g=GOF(r.v),list=rowSizes(r);const info=`<div clas
  const L2=list||SZ();if(g&&!L2.length&&!r.s)return `<div><div class="sl">${NAMES.s}</div><select data-i="${i}" data-k="s" disabled><option>اختار نوع الكرتون الأول</option></select>${info}</div>`;
  return `<div><div class="sl">${NAMES.s}</div><select data-i="${i}" data-k="s">${opts(L2,r.s==='MIX'?'':r.s,'— اختار —')}<option value="MIX"${r.s==='MIX'?' selected':''}>MIX — أكثر من مقاس</option><option value="__new">+ مقاس جديد…</option></select>${info}</div>`}
 function mixEditor(i,r){if(r.s!=='MIX')return '';const lines=Array.isArray(r.mix)&&r.mix.length?r.mix:[{s:'',n:''},{s:'',n:''}];
- return `<div class="mix"><div class="mixh">تفصيل المقاسات داخل الباليت — عدد الكراتين لكل مقاس</div>${lines.map((ln,j)=>`<div class="mixln"><select data-i="${i}" data-mix="${j}" data-mk="s">${opts(rowSizes(r)||SZ(),ln.s,'— المقاس —')}<option value="__new">+ مقاس جديد…</option></select><input data-i="${i}" data-mix="${j}" data-mk="n" type="number" inputmode="numeric" min="1" step="1" placeholder="عدد الكراتين" value="${esc(ln.n)}"><button type="button" class="mixrm" data-i="${i}" data-mix="${j}" aria-label="حذف المقاس">×</button></div>`).join('')}<button type="button" class="mixadd" data-i="${i}">+ مقاس</button><div class="mixsum" id="mixsum${i}"></div></div>`}
+ return `<div class="mix"><div class="mixh">تفصيل المقاسات داخل الباليت — عدد الكراتين لكل مقاس</div>${lines.map((ln,j)=>`<div class="mixln"><select data-i="${i}" data-mix="${j}" data-mk="s">${opts(rowSizes(r)||SZ(),ln.s,'— المقاس —')}<option value="__new">+ مقاس جديد…</option></select><input data-i="${i}" data-mix="${j}" data-mk="n" type="number" inputmode="numeric" min="1" step="1" placeholder="عدد الكراتين" value="${esc(ln.n)}"><button type="button" class="mixrm" data-i="${i}" data-mix="${j}" aria-label="حذف المقاس">×</button></div>`).join('')}<button type="button" class="mixadd" data-i="${i}"${lines.length>=MIXMAX?' disabled':''}>${lines.length>=MIXMAX?'وصلت لـ '+MIXMAX+' مقاسات (الحد الأقصى)':'+ مقاس'}</button><div class="mixsum" id="mixsum${i}"></div></div>`}
 function renderRows(){
  $('rows').innerHTML=S.rows.map((r,i)=>`<div class="row" id="r${i}"><div class="top"><span class="num">${i+1}</span>
  <input data-i="${i}" data-k="p" value="${esc(r.p)}" placeholder="رقم الباليت (من القايمة)" inputmode="text" autocapitalize="characters" autocomplete="off" maxlength="12">
  <span class="run" id="run${i}"></span><button type="button" class="prm" data-prm="${i}" aria-label="حذف الباليت">حذف</button></div>
  <div class="rgrid3">${sel(i,'v',L.variety,r)}${sel(i,'pk',L.pack,r)}${sel(i,'c',CTg(r),r).replace('</select>','<option value="__new">+ نوع جديد…</option></select>')}${sizeSelect(i,r)}${sel(i,'b',BR(),r).replace('</select>','<option value="__new">+ اسم جديد…</option></select>')}${sel(i,'g',L.grade,r)}${sel(i,'loc',L.loc,r)}
  <div><div class="sl">عدد الكراتين</div><input data-i="${i}" data-k="n" type="number" inputmode="numeric" min="1" step="1" value="${esc(r.n)}"></div>
- <div><div class="sl">وزن الكرتونة (كجم)</div><input data-i="${i}" data-k="w" type="number" inputmode="decimal" min="0" step="0.1" value="${esc(r.w)}"></div></div>
+ <div class="wcell"><div class="sl">وزن الكرتونة الأساسي</div>${wBox('r:'+i,r.w)}</div></div>
  ${mixEditor(i,r)}
  <div class="sl">ملاحظات</div><input data-i="${i}" data-k="note" value="${esc(r.note)}">
  <button type="button" class="pkb" id="pk${i}" data-pick="${i}" disabled>🔢 أرقام الباليتات</button>
@@ -180,7 +202,18 @@ document.addEventListener('change',e=>{const t=e.target;if(t.dataset.i===undefin
  if(t.dataset.k==='c'){const w=wOf(t.value);if(w)r.w=w;save();renderRows();upd();return}
  if(t.dataset.k==='s'){if(t.value==='MIX'&&(!Array.isArray(r.mix)||r.mix.length<2))r.mix=[{s:'',n:''},{s:'',n:''}];save();renderRows();upd();return}
  if(t.dataset.k==='c'){const w=wOf(t.value);if(w){r.w=w;const el=document.querySelector(`[data-i="${t.dataset.i}"][data-k="w"]`);if(el)el.value=w}}upd()});
-document.addEventListener('click',e=>{const t=e.target.closest('.mixadd,.mixrm');if(!t)return;const i=+t.dataset.i,r=S.rows[i];r.mix=Array.isArray(r.mix)?r.mix:[];if(t.classList.contains('mixadd'))r.mix.push({s:'',n:''});else{const j=+t.dataset.mix;if(r.mix.length<=2)r.mix[j]={s:'',n:''};else r.mix.splice(j,1);if(mixLines(r).length)r.n=String(mixSum(r))}save();renderRows();upd()});
+document.addEventListener('click',e=>{const t=e.target.closest('.mixadd,.mixrm');if(!t)return;const i=+t.dataset.i,r=S.rows[i];r.mix=Array.isArray(r.mix)?r.mix:[];if(t.classList.contains('mixadd')){if(r.mix.length<MIXMAX)r.mix.push({s:'',n:''})}else{const j=+t.dataset.mix;if(r.mix.length<=2)r.mix[j]={s:'',n:''};else r.mix.splice(j,1);if(mixLines(r).length)r.n=String(mixSum(r))}save();renderRows();upd()});
+/* v40 خانتين الوزن (كجم + جرام) — نفس الكود للباليت وسطر النواقص وشاشة «باليتات جديدة» */
+function wSet(t,val){if(t==='pp'){if(window.WSET_PP)WSET_PP(val);return}const [k,i]=t.split(':');const r=(k==='r'?S.rows:S.left||[])[+i];if(!r)return;r.w=val;save();upd()}
+function wApply(box,G){const k=box.querySelector('.wk'),g=box.querySelector('.wg');let val='';if(G!=null){G=Math.max(0,Math.min(G,(WMAX*1000)-1));k.value=String(Math.floor(G/1000));g.value=String(G%1000);val=wStr(G/1000)}else{const kv=k.value,gv=g.dataset.frac==='1'&&g.value!==''?String(Math.round(Number('0.'+g.value.slice(0,3))*1000)):g.value;if(kv!==''||gv!=='')val=wStr(((+kv||0)*1000+(+gv||0))/1000)}
+ const T=wTot(val),el=box.querySelector('.wtot');el.innerHTML=T.t;el.classList.toggle('bad',T.bad);wSet(box.dataset.wt,val)}
+document.addEventListener('input',e=>{const t=e.target;if(!t.dataset||(t.dataset.wk===undefined&&t.dataset.wg===undefined))return;const box=t.closest('.wbx');const raw=AD(t.value);
+ /* الكيلو اتكتب بفاصلة (7,150 أو 7٫5 أو 7.5): اللي بعد الفاصلة يروح خانة الجرام والكيرسر ينقل لها */
+ if(t.dataset.wk!==undefined&&/[.,٫،]/.test(raw)&&box){const [a,...rest]=raw.split(/[.,٫،]/);const fr=rest.join('').replace(/\D/g,'');t.value=a.replace(/\D/g,'');const g=box.querySelector('.wg');g.dataset.frac='1';g.value=fr.slice(0,3);wApply(box,null);g.focus();try{g.setSelectionRange(g.value.length,g.value.length)}catch(_){}return}
+ const c=raw.replace(/\D/g,'');if(c!==t.value)t.value=c;if(box)wApply(box,null)});
+/* بعد الفاصلة: الأرقام في خانة الجرام كسر عشري (5 = 500 جم) لحد ما تسيب الخانة — وبعدها بتتكتب بالجرام */
+document.addEventListener('focusout',e=>{const t=e.target;if(!t.dataset||t.dataset.wg===undefined||t.dataset.frac!=='1')return;const v=t.value;delete t.dataset.frac;if(v!=='')t.value=String(Math.round(Number('0.'+v.slice(0,3))*1000));const box=t.closest('.wbx');if(box)wApply(box,null)});
+document.addEventListener('click',e=>{const b=e.target.closest('[data-wd]');if(!b)return;const box=b.closest('.wbx');if(!box)return;const k=box.querySelector('.wk').value,g=box.querySelector('.wg').value;const G=(+k||0)*1000+(+g||0)+(+b.dataset.wd);wApply(box,G)});
 /* تغيير الصنف/الكرتون: لو المقاس المختار مش من مقاسات الاختيار الجديد ← تحذير قبل أي مسح (عدد الكراتين والوزن مش بيتمسحوا) */
 function guardChange(r,k,val){if(!window.ALS||(k!=='v'&&!val))return true;const nr=Object.assign({},r,{[k]:val});const g=GOF(nr.v);const lost=[];const clr={};
  if(k==='v'&&r.c&&g&&!ALS.packOf(g,r.c,'')&&!XL.carton.includes(r.c)){lost.push('نوع الكرتون «'+r.c+'»');clr.c=1;nr.c=''}
@@ -197,9 +230,9 @@ function analyse(){
  S.rows.forEach(r=>{const o={};
   if(r.p){pal++;if(!VALID.test(r.p)){o.bad=1;bad++}else if(cnt[r.p]>1){o.dup=1;dups++}else if(window.POOL&&POOL.takenByOther(r.p)){o.dup=1;o.taken=1;dups++}}
   if(r.s==='MIX'){const lines=mixLines(r);const uniq=new Set(lines.map(x=>x.s));if(lines.length<2||uniq.size!==lines.length)o.mixBad='أضف مقاسين مختلفين على الأقل مع عدد الكراتين لكل مقاس';else if((parseInt(r.n)||0)!==mixSum(r))o.mixBad='مجموع كراتين المقاسات ('+mixSum(r)+') لا يساوي عدد الكراتين'}
-  {const nv=String(r.n??'').trim(),wv=String(r.w??'').trim();if(nv&&!/^[1-9]\d*$/.test(nv))o.nBad=1;if(wv&&!(parseFloat(wv)>0&&isFinite(Number(wv))))o.wBad=1;if(o.nBad||o.wBad)nbad++}
+  {const nv=String(r.n??'').trim(),wv=String(r.w??'').trim();if(nv&&!/^[1-9]\d*$/.test(nv))o.nBad=1;if(wv&&!wOk(wv))o.wBad=1;if(o.nBad||o.wBad)nbad++}
   if(filled(r)){o.miss=REQ.filter(k=>!r[k]);if(o.mixBad&&!o.miss.includes('s'))o.miss.push('s');if(o.miss.length)miss++}
-  const n=parseInt(r.n)||0,w=parseFloat(r.w)||0;run+=n;o.kg=n*w;kg+=o.kg;
+  const n=parseInt(r.n)||0,w=wNum(r.w)||0;run+=n;o.kg=n*w;kg+=o.kg;
   if(r.p&&r.v){const sKey=r.s==='MIX'?sizeLabel(r):(r.s||'');const K=r.v+'\u0001'+sKey+'\u0001'+(r.c||'');sum[K]=sum[K]||{v:r.v,s:sKey,c:r.c||'',p:0,n:0,kg:0};sum[K].p++;sum[K].n+=n;sum[K].kg+=n*w}
   res.push(o)});
  return {res,run,pal,dups,bad,miss,nbad,kg:Math.round(kg*10)/10,sum};
@@ -209,9 +242,9 @@ const LREQ=['v','c','s','n'];
 const lfilled=r=>!!r&&['v','pk','c','s','b','g','n','w','note'].some(k=>String(r[k]??'').trim()!=='');
 function lnum(x){const v=String(x??'').trim().replace(/[٠-٩]/g,d=>'٠١٢٣٤٥٦٧٨٩'.indexOf(d)).replace(/[۰-۹]/g,d=>'۰۱۲۳۴۵۶۷۸۹'.indexOf(d)).replace(/[٫,]/g,'.');return v}
 function lcheck(r){const o={miss:LREQ.filter(k=>!String(r[k]??'').trim())};const n=lnum(r.n),w=lnum(r.w);
- if(n&&!/^[1-9]\d*$/.test(n))o.nBad=1;if(w&&!(parseFloat(w)>0&&isFinite(Number(w))))o.wBad=1;if(!w&&r.n)o.noW=1;return o}
+ if(n&&!/^[1-9]\d*$/.test(n))o.nBad=1;if(w&&!wOk(r.w))o.wBad=1;if(!w&&r.n)o.noW=1;return o}
 function leftUsed(){return (S.left||[]).filter(lfilled)}
-function leftTot(){let n=0,kg=0;const bys={};leftUsed().forEach(r=>{const c=/^[1-9]\d*$/.test(lnum(r.n))?parseInt(lnum(r.n),10):0;const w=parseFloat(lnum(r.w))||0;n+=c;kg+=c*w;const k=r.s||'—';bys[k]=bys[k]||{n:0,kg:0};bys[k].n+=c;bys[k].kg+=c*w});return {n,kg:Math.round(kg*10)/10,bys,rows:leftUsed().length}}
+function leftTot(){let n=0,kg=0;const bys={};leftUsed().forEach(r=>{const c=/^[1-9]\d*$/.test(lnum(r.n))?parseInt(lnum(r.n),10):0;const w=wNum(r.w)||0;n+=c;kg+=c*w;const k=r.s||'—';bys[k]=bys[k]||{n:0,kg:0};bys[k].n+=c;bys[k].kg+=c*w});return {n,kg:Math.round(kg*10)/10,bys,rows:leftUsed().length}}
 function leftAnalyse(){let miss=0,bad=0,hard=0;leftUsed().forEach(r=>{const o=lcheck(r);if(o.miss.length)miss++;if(o.miss.some(k=>k==='v'||k==='s'||k==='n'))hard++;if(o.nBad||o.wBad)bad++});return {miss,bad,hard}}
 function lsel(i,k,list,r){return `<div><div class="sl">${NAMES[k]}</div><select data-li="${i}" data-lk="${k}">${opts(list,r[k],'— اختار —')}</select></div>`}
 function lsizes(r){return rowSizes(r).filter(x=>x!=='MIX')}
@@ -219,13 +252,13 @@ function renderLeft(){if(!Array.isArray(S.left))S.left=[];
  $('lrows').innerHTML=S.left.length?S.left.map((r,i)=>`<div class="row lrow" id="l${i}"><div class="top"><span class="num" style="background:#b45309">ن${i+1}</span><span class="run" id="lrun${i}"></span><button type="button" class="btn3" style="padding:6px 12px;margin-inline-start:auto" data-lrm="${i}">حذف</button></div>
  <div class="rgrid3">${lsel(i,'v',L.variety,r)}${lsel(i,'pk',L.pack,r)}${lsel(i,'c',CTg(r),r)}${lsel(i,'s',r.v?lsizes(r):[],r)}${lsel(i,'b',BR(),r)}${lsel(i,'g',L.grade,r)}
  <div><div class="sl">عدد الكراتين</div><input data-li="${i}" data-lk="n" type="number" inputmode="numeric" min="1" step="1" value="${esc(r.n)}"></div>
- <div><div class="sl">وزن الكرتونة (كجم)</div><input data-li="${i}" data-lk="w" type="number" inputmode="decimal" min="0" step="0.1" value="${esc(r.w)}"></div></div>
+ <div class="wcell"><div class="sl">وزن الكرتونة الأساسي</div>${wBox('l:'+i,r.w)}</div></div>
  <div class="sl">ملاحظات</div><input data-li="${i}" data-lk="note" value="${esc(r.note)}">
  <div class="msg" id="lm${i}"></div></div>`).join(''):'<div class="hint">مفيش نواقص — لو فيه بواقي في آخر التشغيل دوس «+ إضافة سطر نواقص».</div>';updLeft()}
 function updLeft(){(S.left||[]).forEach((r,i)=>{const el=$('l'+i);if(!el)return;const o=lfilled(r)?lcheck(r):{miss:[]};
-  el.querySelectorAll('[data-lk]').forEach(x=>{const k=x.dataset.lk;x.classList.toggle('miss',o.miss.includes(k));x.classList.toggle('err',(k==='n'&&!!o.nBad)||(k==='w'&&!!o.wBad))});
-  const c=/^[1-9]\d*$/.test(lnum(r.n))?parseInt(lnum(r.n),10):0,w=parseFloat(lnum(r.w))||0;$('lrun'+i).textContent=c&&w?(Math.round(c*w*10)/10+' كجم'):'';
-  $('lm'+i).textContent=o.nBad?'عدد الكراتين لازم رقم صحيح أكبر من صفر':o.wBad?'وزن الكرتونة لازم رقم أكبر من صفر':o.miss.length?'بيانات ناقصة (الصنف، نوع الكرتون، المقاس، العدد)':o.noW?'اكتب وزن الكرتونة علشان يتحسب الوزن':''});
+  el.querySelectorAll('[data-lk]').forEach(x=>{const k=x.dataset.lk;x.classList.toggle('miss',o.miss.includes(k));x.classList.toggle('err',(k==='n'&&!!o.nBad)||(k==='w'&&!!o.wBad))});el.querySelectorAll('.wbx input').forEach(x=>x.classList.toggle('err',!!o.wBad));
+  const c=/^[1-9]\d*$/.test(lnum(r.n))?parseInt(lnum(r.n),10):0,w=wNum(r.w)||0;$('lrun'+i).textContent=c&&w?(Math.round(c*w*10)/10+' كجم'):'';
+  $('lm'+i).textContent=o.nBad?'عدد الكراتين لازم رقم صحيح أكبر من صفر':o.wBad?wMsg(r.w):o.miss.length?'بيانات ناقصة (الصنف، نوع الكرتون، المقاس، العدد)':o.noW?'اكتب وزن الكرتونة علشان يتحسب الوزن':''});
  const T=leftTot();const ks=Object.keys(T.bys).sort((a,b)=>sizeSortKey(a)-sizeSortKey(b)||String(a).localeCompare(String(b),'ar'));
  $('lsum').innerHTML=T.rows?`<table style="width:100%;margin-top:8px;border-collapse:collapse;font-size:13px"><tr style="background:#fef3c7"><th style="padding:4px">المقاس</th><th>كراتين</th><th>وزن كجم</th></tr>${ks.map(k=>`<tr><td style="text-align:center" dir="ltr">${esc(k)}</td><td style="text-align:center">${T.bys[k].n}</td><td style="text-align:center">${r1(T.bys[k].kg)}</td></tr>`).join('')}<tr style="font-weight:700;border-top:2px solid #b45309"><td style="text-align:center">إجمالي النواقص</td><td style="text-align:center">${T.n}</td><td style="text-align:center">${T.kg}</td></tr></table>`:''}
 document.addEventListener('input',e=>{const t=e.target;if(t.dataset.li===undefined||t.tagName==='SELECT')return;const r=S.left[+t.dataset.li];if(!r)return;r[t.dataset.lk]=t.value;upd()});
@@ -237,12 +270,12 @@ function upd(){
  save();try{renderRaw()}catch(e){}const A=analyse();
  A.res.forEach((o,i)=>{const row=$('r'+i);if(!row)return;
   row.querySelectorAll('[data-k]').forEach(el=>{const k=el.dataset.k;el.classList.toggle('err',(k==='p'&&!!(o.bad||o.dup))||(k==='n'&&!!o.nBad)||(k==='w'&&!!o.wBad));el.classList.toggle('miss',!!(o.miss&&o.miss.includes(k))&&!(k==='p'&&(o.bad||o.dup)))});
-  row.querySelectorAll('[data-mk]').forEach(el=>el.classList.toggle('miss',!!o.mixBad));
+  row.querySelectorAll('[data-mk]').forEach(el=>el.classList.toggle('miss',!!o.mixBad));row.querySelectorAll('.wbx input').forEach(el=>el.classList.toggle('err',!!o.wBad));
   const sumEl=$('mixsum'+i);if(sumEl){const lines=mixLines(S.rows[i]);const sum=lines.reduce((a,x)=>a+x.n,0);sumEl.textContent=lines.length?('مجموع تفصيل المقاسات: '+sum+' كرتونة'):'اختر كل مقاس وعدّ الكراتين الخاصة به'}
   row.classList.toggle('dup',!!o.dup);
   const zi=$('szi'+i);if(zi){const h=szInfoHTML(S.rows[i]);if(zi.innerHTML!==h)zi.innerHTML=h}
   const otherMiss=(o.miss||[]).filter(k=>!(k==='s'&&S.rows[i].s==='MIX'));
-  $('m'+i).textContent=o.bad?'رقم غير صحيح — لازم يبدأ بـ P وفيه أرقام (لحد 12 حرف)':o.taken?'الرقم ده اتاخد من موبايل تاني — غيّره':o.dup?'رقم مكرر!':o.nBad?'عدد الكراتين لازم رقم صحيح أكبر من صفر':o.wBad?'وزن الكرتونة لازم رقم أكبر من صفر':(otherMiss.length?'بيانات ناقصة':(o.mixBad||''));
+  $('m'+i).textContent=o.bad?'رقم غير صحيح — لازم يبدأ بـ P وفيه أرقام (لحد 12 حرف)':o.taken?'الرقم ده اتاخد من موبايل تاني — غيّره':o.dup?'رقم مكرر!':o.nBad?'عدد الكراتين لازم رقم صحيح أكبر من صفر':o.wBad?wMsg(S.rows[i].w):(otherMiss.length?'بيانات ناقصة':(o.mixBad||''));
   $('run'+i).textContent=o.kg?(Math.round(o.kg*10)/10+' كجم'):'';if(window.POOL)POOL.rowHook(i)});if(window.POOL)POOL.changed();
  const LT=leftTot(),LA=leftAnalyse();
  $('stat').innerHTML=LT.rows?`${A.pal} باليت + نواقص ${LT.n} — ${A.run+LT.n} كرتونة<br>${r1(A.kg+LT.kg)} كجم`:`${A.pal} باليت — ${A.run} كرتونة<br>${A.kg} كجم`;
@@ -275,7 +308,7 @@ const COLS=['م','رقم الباليت','الصنف','المقاس','نوع ا�
 function rawMap(){const o={};const vs=rawVarieties();vs.forEach(v=>{const x=parseFloat(String((S.h.raw||{})[v]??'').replace(/,/g,''));if(x>0)o[v]=x});return o}
 function extraHead(){const o=[];const sp=String(S.h.sup||'').trim();if(sp)o.push(['اسم المورد',sp]);const m=rawMap();const t=Object.values(m).reduce((a,b)=>a+b,0);if(t>0)o.push(['الخام الداخل كجم',Math.round(t*10)/10]);return o}
 function repData(){if(!S.h.code){S.h.code=prCode(S.h.date);save()}else syncCode();
- const d=new Date();const A=analyse(),N=v=>v===''||v==null?'':(isNaN(Number(v))?v:Number(v));const aoa=[['الإنتاج اليومي — شركة العلا لفرز الحاصلات الزراعية'],[],['تاريخ الإنتاج',S.h.date],['مهندس التشغيل',S.h.eng],['المُصدر',expDisplay(S.h.exp)],['الوردية',S.h.shift||''],...extraHead(),['كود التقرير',S.h.code],['عدد الباليتات',A.pal],['إجمالي الكراتين',A.run],['إجمالي الوزن كجم',A.kg],[],COLS,...used().map(x=>[x.i,x.p,x.v,sizeExport(x),x.pk,x.c,x.b,x.g,x.loc,N(x.n),N(x.w),x.note])];return {aoa,sup:String(S.h.sup||'').trim(),raw:rawMap(),code:S.h.code,date:S.h.date,shift:S.h.shift,eng:S.h.eng,exp:expDisplay(S.h.exp),at:d.toTimeString().slice(0,5),rows:used().filter(r=>r.p||r.v||r.n),left:leftUsed().map(r=>({v:r.v||'',pk:r.pk||'',c:r.c||'',s:r.s||'',b:r.b||'',g:r.g||'',n:/^[1-9]\d*$/.test(lnum(r.n))?parseInt(lnum(r.n),10):0,w:parseFloat(lnum(r.w))||0,note:String(r.note||'').trim()}))}}
+ const d=new Date();const A=analyse(),N=v=>v===''||v==null?'':(isNaN(Number(v))?v:Number(v));const aoa=[['الإنتاج اليومي — شركة العلا لفرز الحاصلات الزراعية'],[],['تاريخ الإنتاج',S.h.date],['مهندس التشغيل',S.h.eng],['المُصدر',expDisplay(S.h.exp)],['الوردية',S.h.shift||''],...extraHead(),['كود التقرير',S.h.code],['عدد الباليتات',A.pal],['إجمالي الكراتين',A.run],['إجمالي الوزن كجم',A.kg],[],COLS,...used().map(x=>[x.i,x.p,x.v,sizeExport(x),x.pk,x.c,x.b,x.g,x.loc,N(x.n),wX(x.w),x.note])];return {aoa,sup:String(S.h.sup||'').trim(),raw:rawMap(),code:S.h.code,date:S.h.date,shift:S.h.shift,eng:S.h.eng,exp:expDisplay(S.h.exp),at:d.toTimeString().slice(0,5),rows:used().filter(r=>r.p||r.v||r.n).map(r=>({...r,w:wStr(r.w)})),left:leftUsed().map(r=>({v:r.v||'',pk:r.pk||'',c:r.c||'',s:r.s||'',b:r.b||'',g:r.g||'',n:/^[1-9]\d*$/.test(lnum(r.n))?parseInt(lnum(r.n),10):0,w:wNum(r.w)||0,note:String(r.note||'').trim()}))}}
 /* v38: نفس الشروط للـ PDF والإكسل — برنامج المحطة بيرفض الملف كله لو فيه باليت غلط/مكرر/من غير تاريخ، وكان بيسجل عدد كراتين سالب أو بكسور زي ما هو */
 function hardErr(){const A=analyse();const e=[];if(!S.h.date)e.push('تاريخ الإنتاج ناقص');if(A.bad)e.push(A.bad+' رقم باليت غير صحيح');if(A.dups)e.push(A.dups+' سطر برقم باليت مكرر');if(A.nbad)e.push(A.nbad+' باليت فيه عدد كراتين أو وزن غلط (العدد لازم رقم صحيح أكبر من صفر)');const LA=leftAnalyse();if(LA.bad)e.push(LA.bad+' سطر نواقص فيه عدد كراتين أو وزن غلط');if(LA.hard)e.push(LA.hard+' سطر نواقص ناقص فيه الصنف أو المقاس أو عدد الكراتين');return {A,LA,e}}
 function hardOk(){const {e}=hardErr();if(e.length){alert('مينفعش نطلع التقرير قبل تصليح:\n\n• '+e.join('\n• ')+'\n\n(برنامج المحطة بيرفض الملف كله لو فيه باليت غلط أو مكرر)');return false}return true}
@@ -306,12 +339,12 @@ function makeXlsx(){const A=analyse();const R=[];let r=1;
  [['تاريخ الإنتاج',S.h.date],['مهندس التشغيل',S.h.eng],['المُصدر',expDisplay(S.h.exp)],...extraHead(),['عدد الباليتات',A.pal],['إجمالي الكراتين',A.run],['إجمالي الوزن كجم',A.kg]].forEach(x=>row(x));
  r++;row(COLS,2);
  const N=v=>v===''?'':(isNaN(Number(v))?v:Number(v));
- used().forEach(x=>row([x.i,x.p,x.v,sizeExport(x),x.pk,x.c,x.b,x.g,x.loc,N(x.n),N(x.w),x.note]));
+ used().forEach(x=>row([x.i,x.p,x.v,sizeExport(x),x.pk,x.c,x.b,x.g,x.loc,N(x.n),wX(x.w),x.note]));
  r++;row(['ملخص الأصناف'],1);row(['الصنف','المقاس','نوع الكرتون','باليتات','كراتين','وزن كجم'],2);{const ks=sumKeys(A);ks.forEach(k=>row([A.sum[k].v,(isNaN(Number(A.sum[k].s))||A.sum[k].s===""?A.sum[k].s:Number(A.sum[k].s)),A.sum[k].c,A.sum[k].p,A.sum[k].n,r1(A.sum[k].kg)]));row(['الإجمالي','','',ks.reduce((a,k)=>a+A.sum[k].p,0),ks.reduce((a,k)=>a+A.sum[k].n,0),r1(ks.reduce((a,k)=>a+A.sum[k].kg,0))],2);}
  const sheet=`<?xml version="1.0" encoding="UTF-8" standalone="yes"?><worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main"><sheetViews><sheetView rightToLeft="1" workbookViewId="0"/></sheetViews><cols><col min="1" max="1" width="18" customWidth="1"/><col min="2" max="11" width="14" customWidth="1"/></cols><sheetData>${R.join('')}</sheetData></worksheet>`;
  /* v22: النواقص في شيت تاني (الشيت الأول زي ما هو علشان برنامج المحطة القديم) */
  const LR=[];{const keep=R.splice(0,R.length);r=1;const LT=leftTot();row(['النواقص — بواقي التشغيل بدون رقم باليت'],1);row(['تاريخ الإنتاج',S.h.date]);row(['كود التقرير',S.h.code||'']);r++;row(['م','الصنف','المقاس','نوع التعبئة','نوع الكرتون','اسم الكرتون','الدرجة','عدد الكراتين','وزن الكرتونة (كجم)','الوزن كجم','ملاحظات'],2);
-  leftUsed().forEach((x,i)=>{const c=/^[1-9]\d*$/.test(lnum(x.n))?parseInt(lnum(x.n),10):0,w=parseFloat(lnum(x.w))||0;row([i+1,x.v,N(x.s),x.pk,x.c,x.b,x.g,c,w||'',r1(c*w),x.note])});
+  leftUsed().forEach((x,i)=>{const c=/^[1-9]\d*$/.test(lnum(x.n))?parseInt(lnum(x.n),10):0,w=wNum(x.w)||0;row([i+1,x.v,N(x.s),x.pk,x.c,x.b,x.g,c,w||'',r1(c*w),x.note])});
   row(['إجمالي النواقص','','','','','','',LT.n,'',LT.kg],2);LR.push(...R.splice(0,R.length));R.push(...keep)}
  const sheet2=`<?xml version="1.0" encoding="UTF-8" standalone="yes"?><worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main"><sheetViews><sheetView rightToLeft="1" workbookViewId="0"/></sheetViews><cols><col min="1" max="11" width="15" customWidth="1"/></cols><sheetData>${LR.join('')}</sheetData></worksheet>`;
  const two=leftUsed().length>0;
@@ -324,7 +357,7 @@ function makeXlsx(){const A=analyse();const R=[];let r=1;
 $('bXlsx').onclick=()=>{if(!hardOk())return;download(makeXlsx(),fname('xlsx'))};
 function csv(){const A=analyse();const q=v=>'"'+String(v??'').replace(/"/g,'""')+'"';const o=[];
  [['تاريخ الإنتاج',S.h.date],['مهندس التشغيل',S.h.eng],['المُصدر',expDisplay(S.h.exp)],...extraHead(),['عدد الباليتات',A.pal],['إجمالي الكراتين',A.run],['إجمالي الوزن كجم',A.kg],[]].forEach(x=>o.push(x.map(q).join(',')));
- o.push(COLS.map(q).join(','));used().forEach(x=>o.push([x.i,x.p,x.v,sizeLabel(x),x.pk,x.c,x.b,x.g,x.loc,x.n,x.w,x.note].map(q).join(',')));
+ o.push(COLS.map(q).join(','));used().forEach(x=>o.push([x.i,x.p,x.v,sizeLabel(x),x.pk,x.c,x.b,x.g,x.loc,x.n,wX(x.w),x.note].map(q).join(',')));
  return new Blob(['\ufeff'+o.join('\r\n')],{type:'text/csv;charset=utf-8'})}
 $('bShare').onclick=async()=>{if(!hardOk())return;
  const ios=document.documentElement.classList.contains('ios');const title=reportTitle();const data=fl=>ios?{files:fl}:{files:fl,title,text:title};
@@ -339,7 +372,7 @@ if(location.hash==='#demo'){S=blank();S.h.eng='م. أحمد';
 initHeader();renderRows();renderLeft();upd();
 if('serviceWorker' in navigator&&(location.protocol==='https:'||location.hostname==='localhost'))navigator.serviceWorker.register('sw.js').catch(()=>{});
 </script>
-<script src="pallet-pool.js?v=4"></script>
+<script src="pallet-pool.js?v=5"></script>
 <script>
 // ===== v34 autosave: every change saved at once on the phone (localStorage + IndexedDB, per day), restored after kill/reload/background/offline; days kept apart =====
 (function(){
