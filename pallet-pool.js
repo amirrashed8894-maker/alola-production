@@ -38,7 +38,7 @@ function reconcile(){if(!S)return;if(!Array.isArray(S.poolNums))S.poolNums=[];co
  if(ch){persist();try{save()}catch(e){}flush()}}
 function changed(){clearTimeout(rt);rt=setTimeout(reconcile,700)}
 /* ---------- spec completeness of a card ---------- */
-function specOk(r){if(!r||!r.v)return false;if(String(r.w??'').trim()&&!wOk(r.w))return false;if(['v','s','pk','c','b','g','loc','n'].some(k=>!String(r[k]||'').trim()))return false;if(!/^[1-9]\d*$/.test(String(r.n).trim()))return false;if(r.s==='MIX'){const L=mixLines(r);if(L.length<2||new Set(L.map(x=>x.s)).size!==L.length||(parseInt(r.n)||0)!==mixSum(r))return false}return true}
+function specOk(r){if(!r||!r.v)return false;if(String(r.w??'').trim()&&!wOk(r.w))return false;if(['v','s','pk','c','b','g','loc','n'].some(k=>!String(r[k]||'').trim()))return false;if(!/^[1-9]\d*$/.test(String(r.n).trim()))return false;if(r.s==='MIX'){const L=mixLines(r);if(mixPartial(r)||L.length<2||new Set(L.map(x=>x.s)).size!==L.length||(parseInt(r.n)||0)!==mixSum(r))return false}return true}
 function rowHook(i){const b=document.getElementById('pk'+i);if(!b)return;const r=S.rows[i];const ok=specOk(r);b.disabled=!ok;b.textContent=ok?(r.p?'🔢 باليتات تانية بنفس المواصفة':'🔢 اختار أرقام الباليتات'):'🔢 أرقام الباليتات — كمّل المواصفة الأول'}
 /* ---------- v2 entry: one sheet → «المواصفة» (big chips, last spec prefilled, recent specs) → «الأرقام» (big buttons, range, +N) → «تأكيد» ---------- */
 let cur=null;
@@ -131,7 +131,7 @@ function drawSpec(el){const W=cur.spec;const R=recent();const g=GOF(W.v);
  <div class="gt" style="margin-top:8px"><span>وزن الكرتونة الأساسي — كيلو + جرام</span></div>${wBox('pp',W.w)}</div>
  </div>
  <div class="ft"><button type="button" class="btn go" data-pp="tonums" ${specOk(W)?'':'style="background:#9db59f"'}>${specOk(W)?'التالي: اختار الأرقام ←':'كمّل: '+missing(W).join('، ')}</button></div>`}
-function missing(W){const N={v:'الصنف',pk:'التعبئة',c:'الكرتون',s:'المقاس',b:'اسم الكرتون',g:'الدرجة',loc:'التخزين',n:'عدد الكراتين'};const m=Object.keys(N).filter(k=>!String(W[k]||'').trim()).map(k=>N[k]);if(String(W.n||'').trim()&&!/^[1-9]\d*$/.test(String(W.n).trim()))m.push('عدد الكراتين (رقم صحيح أكبر من صفر)');if(W.s==='MIX'&&(mixLines(W).length<2))m.push('مقاسين MIX على الأقل');if(W.s==='MIX'){const L=mixLines(W);if(new Set(L.map(x=>x.s)).size!==L.length)m.push('مقاسات MIX مختلفة')}if(String(W.w??'').trim()&&!wOk(W.w))m.push('وزن الكرتونة');return m}
+function missing(W){const N={v:'الصنف',pk:'التعبئة',c:'الكرتون',s:'المقاس',b:'اسم الكرتون',g:'الدرجة',loc:'التخزين',n:'عدد الكراتين'};const m=Object.keys(N).filter(k=>!String(W[k]||'').trim()).map(k=>N[k]);if(String(W.n||'').trim()&&!/^[1-9]\d*$/.test(String(W.n).trim()))m.push('عدد الكراتين (رقم صحيح أكبر من صفر)');if(W.s==='MIX'&&mixPartial(W))m.push('سطر MIX ناقص (المقاس وعدد كراتينه)');if(W.s==='MIX'&&(mixLines(W).length<2))m.push('مقاسين MIX على الأقل');if(W.s==='MIX'){const L=mixLines(W);if(new Set(L.map(x=>x.s)).size!==L.length)m.push('مقاسات MIX مختلفة')}if(String(W.w??'').trim()&&!wOk(W.w))m.push('وزن الكرتونة');return m}
 function setField(f,v){const W=cur.spec;
  if((f==='v'||f==='pk'||f==='c')&&window.ALS){W[f]=v;if(f==='v'){const g=GOF(v);if(g==='mand'&&!W.pk)W.pk='صندوق بلاستيك';if(g==='lemon'&&!W.pk)W.pk='كرتون'}
   if(W.c&&!CTg(W).includes(W.c))W.c='';
@@ -162,11 +162,11 @@ document.addEventListener('input',e=>{if(!cur||cur.step!=='spec')return;const t=
  const go=document.querySelector('#pp [data-pp="tonums"]');if(go){const ok=specOk(W);go.style.background=ok?'':'#9db59f';go.textContent=ok?'التالي: اختار الأرقام ←':'كمّل: '+missing(W).join('، ')}});
 document.addEventListener('click',e=>{const t=e.target.closest('[data-pp],[data-pc],[data-pick],[data-prm],[data-sf],[data-sadd],[data-rec],[data-mixs],[data-mixadd],[data-mixrm],[data-nd],[data-addn],#pAdd,#pLast');if(!t)return;
  if(t.id==='pAdd'){openNew();return}
- if(t.id==='pLast'){const R=recent();if(R[0])startNums(JSON.parse(JSON.stringify(R[0])),null);return}
+ if(t.id==='pLast'){const R=recent();if(R[0]){if(window.askRawIfMissing&&!askRawIfMissing(R[0].v))return;startNums(JSON.parse(JSON.stringify(R[0])),null)}return}
  if(t.dataset.pick!==undefined){openRow(+t.dataset.pick);return}
  if(t.dataset.prm!==undefined){const i=+t.dataset.prm,r=S.rows[i];if(!r)return;if(filled(r)&&!confirm('حذف الباليت'+(r.p?' '+r.p:' رقم '+(i+1))+'؟'+(RE.test(r.p||'')?'\nالرقم هيرجع لقايمة الأرقام.':'')))return;S.rows.splice(i,1);if(!S.rows.length)S.rows.push(er());save();renderRows();upd();reconcile();return}
  if(!cur)return;
- if(t.dataset.rec!==undefined){const o=recent()[+t.dataset.rec];if(o){cur.spec=JSON.parse(JSON.stringify(o));startNums(cur.spec,null)}return}
+ if(t.dataset.rec!==undefined){const o=recent()[+t.dataset.rec];if(o){if(window.askRawIfMissing&&!askRawIfMissing(o.v))return;cur.spec=JSON.parse(JSON.stringify(o));startNums(cur.spec,null)}return}
  if(t.dataset.sf){setField(t.dataset.sf,t.dataset.sv);cur.keep=true;draw();const nx=nextNeed();if(nx&&t.dataset.sf!=='s')nx.scrollIntoView({block:'center',behavior:'smooth'});return}
  if(t.dataset.sadd){const f=t.dataset.sadd;let x='';if(f==='s')x=addCustomSize();else{x=(prompt(f==='b'?'اسم الكرتون الجديد:':'اسم نوع الكرتون الجديد (مثال: مقفول 10 ك):')||'').trim();if(x&&!isMaggiName(x)){const arr=f==='b'?XL.brand:XL.carton;if(!(f==='b'?BR():CT()).includes(x)){arr.push(x);saveXL()}}else x=''}if(x)setField(f,x);cur.keep=true;draw();return}
  if(t.dataset.mixs){const W=cur.spec;W.mix=W.mix||[];const j=W.mix.findIndex(m=>m.s===t.dataset.mixs);if(j<0)W.mix.push({s:t.dataset.mixs,n:''});else W.mix.splice(j,1);W.n=String(mixSum(W)||'');cur.keep=true;draw();return}
@@ -181,7 +181,7 @@ document.addEventListener('click',e=>{const t=e.target.closest('[data-pp],[data-
  const a=t.dataset.pp;
  if(a==='x'){close();return}
  if(a==='clear'){cur.spec={v:'',pk:'',c:'',s:'',mix:[],b:'',g:'',loc:'',n:'',w:''};draw();return}
- if(a==='tonums'){if(!specOk(cur.spec)){cur.tried=true;cur.keep=true;draw();const nx=nextNeed();if(nx)nx.scrollIntoView({block:'center'});return}const u=used();cur.first=cur.block=firstFreeBlock(u);cur.step='nums';draw();flush();return}
+ if(a==='tonums'){if(!specOk(cur.spec)){cur.tried=true;cur.keep=true;draw();const nx=nextNeed();if(nx)nx.scrollIntoView({block:'center'});return}if(window.askRawIfMissing&&!askRawIfMissing(cur.spec.v))return;const u=used();cur.first=cur.block=firstFreeBlock(u);cur.step='nums';draw();flush();return}
  if(a==='tospec'){cur.step='spec';cur.confirm=false;draw();return}
  if(a==='prev'){cur.block=Math.max(cur.first,cur.block-1);draw();return}
  if(a==='next'){cur.block++;draw();return}
