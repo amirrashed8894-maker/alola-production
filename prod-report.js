@@ -142,7 +142,7 @@ function shareFamily(v){const s=String(v||'').trim()||'غير محدد';const A=
    kg per carton: the row's own carton weight → else the median carton weight of the same variety + carton name in this report
    → else the variety's average kg/carton → else (no weight at all in that variety) the % falls back to cartons for that variety only.
    Estimated weights are marked «*». */
-function wParse(v){if(typeof v==='number')return isFinite(v)&&v>0?v:0;const t=String(v==null?'':v).replace(/[٠-٩]/g,d=>'٠١٢٣٤٥٦٧٨٩'.indexOf(d)).replace(/[۰-۹]/g,d=>'۰۱۲۳۴۵۶۷۸۹'.indexOf(d)).replace(/\s/g,'').replace(/[٫,،]/g,'.');const n=parseFloat(t);return isFinite(n)&&n>0?n:0}
+function wParse(v){/* same rule as the entry screen (wNum + wOk): plain number, 0 < kg < 100; a red/invalid weight (7150, «7 + 1500 جم», text) counts as missing → estimated */let n;if(typeof v==='number')n=v;else{const t=String(v==null?'':v).replace(/[٠-٩]/g,d=>'٠١٢٣٤٥٦٧٨٩'.indexOf(d)).replace(/[۰-۹]/g,d=>'۰۱۲۳۴۵۶۷۸۹'.indexOf(d)).replace(/\s/g,'').replace(/[٫,،]/g,'.');if(!/^(\d+\.?\d*|\.\d+)$/.test(t))return 0;n=parseFloat(t)}return isFinite(n)&&n>0&&n<100?n:0}
 function rowW(r){if(!r)return 0;if(r._w!=null&&r._w!=='')return wParse(r._w);return wParse(r.w)}
 function sizeShare(rows,left){const bag=new Map();const items=[];
  const add=(r,s,n)=>{n=parseInt(n,10)||0;if(!(n>0))return;const src=String((r&&r.v)||'').trim()||'غير محدد';const v=shareFamily(src);const c=String((r&&r.c)||'').trim()||String((r&&r.pk)||'').trim()||'غير محدد';s=String(s||'').trim()||'غير محدد';items.push({v,c,s,n,w:rowW(r),src})};
