@@ -85,7 +85,9 @@ function groups(){const G=new Map();(S.left||[]).forEach((r,i)=>{if(!lfilled(r))
  return [...G.values()].map(g=>{const sz=new Map();g.idx.forEach(i=>{const r=S.left[i];const s=String(r.s||'').trim();if(!sz.has(s))sz.set(s,{s,n:0,idx:[],w:{}});const o=sz.get(s);o.n+=lc(r);o.idx.push(i);const w=wStr(r.w);if(w)o.w[w]=(o.w[w]||0)+lc(r)});g.sizes=[...sz.values()];return g})}
 function locOpts(){const seen={};S.rows.forEach(r=>{if(r&&r.loc)seen[r.loc]=(seen[r.loc]||0)+1});const best=Object.keys(seen).sort((a,b)=>seen[b]-seen[a])[0]||'';return {list:[...new Set([...(L.loc||[]),...Object.keys(seen)])],best}}
 function wPick(ch){const W={};ch.forEach(z=>Object.entries(z.w).forEach(([k,c])=>W[k]=(W[k]||0)+c));return Object.keys(W).sort((a,b)=>W[b]-W[a])}
-function netPal(g,ch){const n=ch.reduce((a,z)=>a+z.n,0);const ws=wPick(ch);if(!ws.length)return null;const pal=netOfRow({p:'P?',v:g.v,c:g.c,n:String(n),w:ws[0]},false);let left=0;ch.forEach(z=>z.idx.forEach(i=>{const v=netOfRow(S.left[i],true);left+=v||0}));return pal==null?null:{pal,left}}
+/* مفيش وزن في النواقص ← وزن باليت من نفس التعبئة والكرتون في التقرير */
+function fallbackW(g){const C={};S.rows.forEach(r=>{if(r&&filled(r)&&r.pk===g.pk&&r.c===g.c){const w=wStr(r.w);if(w)C[w]=(C[w]||0)+1}});return Object.keys(C).sort((a,b)=>C[b]-C[a])[0]||''}
+function netPal(g,ch){const n=ch.reduce((a,z)=>a+z.n,0);const ws=wPick(ch);if(!ws.length){const f=fallbackW(g);if(f)ws.push(f)}if(!ws.length)return null;const pal=netOfRow({p:'P?',v:g.v,c:g.c,n:String(n),w:ws[0]},false);let left=0;ch.forEach(z=>z.idx.forEach(i=>{const v=netOfRow(S.left[i],true);left+=v||0}));return pal==null?null:{pal,left}}
 function openConvert(){const G=groups();if(!G.length){alert('مفيش نواقص في التقرير ده');return}const LO=locOpts();const SZL=SZ();
  const body='<div class="re-hint">كل مجموعة = نفس الصنف والتعبئة والكرتون والاسم والدرجة. علّم المقاسات اللي هتدخل الباليت (من 2 لـ 5 مقاسات للـ MIX، أو مقاس واحد لباليت عادي). عدد كراتين الباليت = مجموع المقاسات (مقفول). السطور اللي هتتحول بتتشال من النواقص.</div>'+
   G.map((g,gi)=>'<div class="re-grp" data-g="'+gi+'"><div class="re-gt">'+esc([g.v,g.pk,g.c,g.b,g.g].filter(Boolean).join(' · '))+'</div>'+
@@ -100,7 +102,7 @@ function openConvert(){const G=groups();if(!G.length){alert('مفيش نواقص
  w.addEventListener('change',e=>{const t=e.target;if(t.dataset.zg!==undefined)paint(+t.dataset.zg)});
  w.addEventListener('click',e=>{const t=e.target.closest('[data-mk]');if(!t||t.disabled)return;const gi=+t.dataset.mk,g=G[gi];const ch=[...w.querySelectorAll('[data-zg="'+gi+'"]:checked')].map(x=>g.sizes[+x.dataset.z]);if(!ch.length||ch.length>5)return;
   const loc=w.querySelector('[data-gloc="'+gi+'"]').value;if(!loc){alert('اختار مكان التخزين للباليت');return}
-  const n=ch.reduce((a,z)=>a+z.n,0);const W={};ch.forEach(z=>Object.entries(z.w).forEach(([k,c])=>W[k]=(W[k]||0)+c));const ws=Object.keys(W).sort((a,b)=>W[b]-W[a]);
+  const n=ch.reduce((a,z)=>a+z.n,0);const ws=wPick(ch);if(!ws.length){const f=fallbackW(g);if(f)ws.push(f);else{alert('سطور النواقص دي مفيهاش وزن الكرتونة — اكتب الوزن في النواقص الأول، وبعدين حوّلها لباليت.');return}}
   if(!confirm('هتشيل '+ch.reduce((a,z)=>a+z.idx.length,0)+' سطر من النواقص ('+n+' كرتونة) وتعمل '+(ch.length>1?'باليت MIX بـ '+ch.length+' مقاسات':'باليت مقاس '+ch[0].s)+' = '+n+' كرتونة.'+(ws.length>1?'\n⚠ أوزان الكرتونة مختلفة ('+ws.join(' / ')+' كجم) — هيتاخد '+ws[0]+' كجم، راجعه.':'')+'\nبعدها اختار رقم الباليت. تمام؟'))return;
   const row=Object.assign(er(),{v:g.v||'',pk:g.pk||'',c:g.c||'',b:g.b||'',g:g.g||'',loc,n:String(n),w:ws[0]||'',note:'اتحول من النواقص'});
   if(ch.length>1){row.s='MIX';row.mix=ch.map(z=>({s:z.s,n:String(z.n)}))}else row.s=ch[0].s;
