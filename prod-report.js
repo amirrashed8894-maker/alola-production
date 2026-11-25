@@ -242,6 +242,8 @@ async pdf(d){
  const nextBody=k=>{if(!nodes[k+1]){const np=mkPage();nodes[k].after(np);nodes.splice(k+1,0,np)}return nodes[k+1].querySelector('.body')};
  const tblRows=ch=>{const tb=ch.querySelector('table>tbody');return tb?[...tb.children]:[]};
  const keepTr=tr=>!!tr&&(tr.classList.contains('gh')||tr.getAttribute('data-keep')==='1');
+ /* v29: the same check runs again after the fonts and logos finish loading — a late font can make a block taller (WebKit: the last pallet row ended up 12px under the footer) */
+ const fixPages=()=>{
  for(let k=0,guard=0;k<nodes.length&&guard<5000;k++){
   while(overflow(nodes[k])&&guard++<5000){
    const bd=nodes[k].querySelector('.body');const ch=bd.lastElementChild;const nb=nextBody(k);const first=nb.firstElementChild;
@@ -259,6 +261,10 @@ async pdf(d){
    nb.insertBefore(ch,nb.firstChild)}
  }
  for(let k=nodes.length-1;k>0;k--){if(!nodes[k].querySelector('.body').children.length){nodes[k].remove();nodes.splice(k,1)}}
+ };
+ fixPages();await document.fonts.ready;
+ await Promise.all([...st.querySelectorAll('img')].map(img=>img.complete&&img.naturalWidth?1:new Promise(r=>{img.onload=img.onerror=r})));
+ fixPages();
  nodes.forEach((pg,k)=>{const f=pg.querySelector('.foot');const t=document.createElement('div');t.innerHTML=footHTML(k+1,nodes.length,d,dt);f.replaceWith(t.firstElementChild)});
  meas.remove();st.querySelectorAll('.chromeTop,.foot').forEach((el,i)=>{if(!el.closest('.page'))el.remove()});
  await document.fonts.ready;
