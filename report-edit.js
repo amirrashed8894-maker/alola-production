@@ -29,7 +29,7 @@ function startRevision(){const h=S.h;const base=baseCode(h.code)||prCode(h.date)
 function confirmText(x,src){const h=x.h||{};const base=baseCode(h.code);const n=(h.rev&&h.revIssued!==h.rev)?h.rev:(h.rev||0)+1;
  return 'هتفتح تقرير يوم '+slash(h.date)+(h.shift?' ('+h.shift+')':'')+' للتعديل'+(src?' من '+src:'')+'.\n\n'+
  '• التاريخ والوردية هيفضلوا زي ما هم.\n• التقرير هيطلع برقم '+(base?base+'-R'+n:'جديد')+' ومكتوب عليه «معدّل».\n'+
- '• لو التقرير القديم اتسجل في برنامج المحطة: الغِ تسجيله هناك الأول («إلغاء تسجيل الملف»)، وبعدين سجّل المعدّل — المحطة بترفض الملف المعدّل لو باليتاته متسجلة.\n\nتكمل؟'}
+ '• لو التقرير القديم اتسجل في برنامج المحطة: احذف تشغيله هناك الأول من «التشغيل والإنتاج» ← حذف التشغيل، وبعدين سجّل المعدّل — المحطة بترفض الملف المعدّل لو باليتاته متسجلة.\n\nتكمل؟'}
 async function openForEdit(x,src){if(isIssued(x)&&!confirm(confirmText(x,src)))return false;
  await save();S=JSON.parse(JSON.stringify(x));if(!Array.isArray(S.left))S.left=[];if(!Array.isArray(S.rows)||!S.rows.length)S.rows=[er()];
  if(isIssued(S))startRevision();await save();closeSheet();redraw();scrollTo(0,0);
