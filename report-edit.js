@@ -67,18 +67,25 @@ function sheet(title,body){closeSheet();const w=document.createElement('div');w.
  w.addEventListener('click',e=>{if(e.target===w||e.target.closest('[data-re="x"]'))closeSheet()});document.body.appendChild(w);return w}
 async function openEditList(){const L=(await (window.prodDays?prodDays():Promise.resolve([])).catch(()=>[])).filter(x=>x&&x.h);const cur=S&&S.h&&isIssued(S)?[S]:[];
  const card=(x,i,isCur)=>{const h=x.h||{};const pal=(x.rows||[]).filter(r=>r&&r.p).length,lf=(x.left||[]).filter(lfilled).length;
-  return '<div class="re-day"><div><b>'+esc(slash(h.date))+'</b>'+(h.shift?' · '+esc(h.shift):'')+(h.eng?' · '+esc(h.eng):'')+'<div class="re-sub">'+pal+' باليت · '+lf+' سطر نواقص'+(h.code?' · <span dir="ltr">'+esc(h.code)+'</span>':'')+'</div><div class="re-sub">'+(isIssued(x)?'<span class="re-ok">اتصدر'+(h.lastIssuedAt?' '+esc(stamp(h.lastIssuedAt)):'')+'</span>':'<span>لسه ما اتصدرش</span>')+(h.rev?' · <span class="re-rev">معدّل R'+h.rev+'</span>':'')+(isCur?' · <b>مفتوح دلوقتي</b>':'')+'</div></div><button type="button" class="btn re-go" data-reo="'+(isCur?'cur':i)+'">✏️ تعديل</button></div>'};
+  return '<div class="re-day"><div><b>'+esc(slash(h.date))+'</b>'+(h.shift?' · '+esc(h.shift):'')+(h.eng?' · '+esc(h.eng):'')+'<div class="re-sub">'+pal+' باليت · '+lf+' سطر نواقص'+(()=>{const t=netOfDay(x);return t!=null&&t>0?' · صافي '+t.toLocaleString('en-US',{maximumFractionDigits:1})+' كجم':''})()+(h.code?' · <span dir="ltr">'+esc(h.code)+'</span>':'')+'</div><div class="re-sub">'+(isIssued(x)?'<span class="re-ok">اتصدر'+(h.lastIssuedAt?' '+esc(stamp(h.lastIssuedAt)):'')+'</span>':'<span>لسه ما اتصدرش</span>')+(h.rev?' · <span class="re-rev">معدّل R'+h.rev+'</span>':'')+(isCur?' · <b>مفتوح دلوقتي</b>':'')+'</div></div><button type="button" class="btn re-go" data-reo="'+(isCur?'cur':i)+'">✏️ تعديل</button></div>'};
  const w=sheet('✏️ تعديل تقرير اتصدر قبل كده','<div class="re-hint">اختار التقرير (مثلاً تقرير امبارح). هيتفتح بنفس تاريخه ووردِيته، وتقدر تشيل النواقص وتحوّلها لباليتات MIX، وبعدين تطلّع PDF / Excel معدّل.</div>'+
   (cur.length?card(S,0,true):'')+(L.length?L.map((x,i)=>card(x,i,false)).join(''):'<div class="re-empty">مفيش أيام تانية محفوظة على الموبايل ده</div>')+
   '<label class="btn2 re-file">📄 افتح تقرير من ملف PDF (من الواتساب أو من موبايل تاني)<input type="file" accept="application/pdf,.pdf" id="rePdf" hidden></label>');
  w.addEventListener('click',async e=>{const t=e.target.closest('[data-reo]');if(!t)return;if(t.dataset.reo==='cur'){if(!confirm(confirmText(S,'')))return;startRevision();await save();closeSheet();redraw();paintRevBanner();return}const x=L[+t.dataset.reo];if(x)await openForEdit(x,'الأيام المحفوظة');paintRevBanner()});
  w.querySelector('#rePdf').addEventListener('change',async e=>{const f=e.target.files&&e.target.files[0];if(f){await openPdfFile(f);paintRevBanner()}})}
+/* ---------- الوزن الصافي: نفس دالة التقرير (PR.netG / PR.netTotals) — خصم 20 كجم للباليت والكراتين الفاضية ---------- */
+const nrm=r=>Object.assign({},r,{n:String(parseInt(AD(String(r&&r.n||'')).trim(),10)||0),w:String(wNum(r&&r.w)||0)});
+const kg1=g=>(Math.round(g/100)/10).toLocaleString('en-US',{maximumFractionDigits:1});
+function netOfDay(x){try{if(!window.PR||!PR.netTotals)return null;const P=PR.prepYield((x.rows||[]).filter(filled).map(nrm),(x.left||[]).filter(lfilled).map(nrm));return PR.netTotals(P.rows,P.left).tt/10}catch(e){return null}}
+function netOfRow(r,isLeft){try{if(!window.PR||!PR.netG)return null;const P=PR.prepYield(isLeft?[]:[nrm(r)],isLeft?[nrm(r)]:[]);return PR.netG(isLeft?P.left[0]:P.rows[0],isLeft)}catch(e){return null}}
 /* ---------- 3) النواقص ← باليتات MIX ---------- */
 const gk=r=>[r.v,r.pk,r.c,r.b,r.g].map(x=>String(x||'').trim()).join('|');
 const lc=r=>{const s=AD(String(r.n||'')).trim();return /^[1-9]\d*$/.test(s)?parseInt(s,10):0};
 function groups(){const G=new Map();(S.left||[]).forEach((r,i)=>{if(!lfilled(r))return;const k=gk(r);if(!G.has(k))G.set(k,{k,v:r.v,pk:r.pk,c:r.c,b:r.b,g:r.g,idx:[]});G.get(k).idx.push(i)});
  return [...G.values()].map(g=>{const sz=new Map();g.idx.forEach(i=>{const r=S.left[i];const s=String(r.s||'').trim();if(!sz.has(s))sz.set(s,{s,n:0,idx:[],w:{}});const o=sz.get(s);o.n+=lc(r);o.idx.push(i);const w=wStr(r.w);if(w)o.w[w]=(o.w[w]||0)+lc(r)});g.sizes=[...sz.values()];return g})}
 function locOpts(){const seen={};S.rows.forEach(r=>{if(r&&r.loc)seen[r.loc]=(seen[r.loc]||0)+1});const best=Object.keys(seen).sort((a,b)=>seen[b]-seen[a])[0]||'';return {list:[...new Set([...(L.loc||[]),...Object.keys(seen)])],best}}
+function wPick(ch){const W={};ch.forEach(z=>Object.entries(z.w).forEach(([k,c])=>W[k]=(W[k]||0)+c));return Object.keys(W).sort((a,b)=>W[b]-W[a])}
+function netPal(g,ch){const n=ch.reduce((a,z)=>a+z.n,0);const ws=wPick(ch);if(!ws.length)return null;const pal=netOfRow({p:'P?',v:g.v,c:g.c,n:String(n),w:ws[0]},false);let left=0;ch.forEach(z=>z.idx.forEach(i=>{const v=netOfRow(S.left[i],true);left+=v||0}));return pal==null?null:{pal,left}}
 function openConvert(){const G=groups();if(!G.length){alert('مفيش نواقص في التقرير ده');return}const LO=locOpts();const SZL=SZ();
  const body='<div class="re-hint">كل مجموعة = نفس الصنف والتعبئة والكرتون والاسم والدرجة. علّم المقاسات اللي هتدخل الباليت (من 2 لـ 5 مقاسات للـ MIX، أو مقاس واحد لباليت عادي). عدد كراتين الباليت = مجموع المقاسات (مقفول). السطور اللي هتتحول بتتشال من النواقص.</div>'+
   G.map((g,gi)=>'<div class="re-grp" data-g="'+gi+'"><div class="re-gt">'+esc([g.v,g.pk,g.c,g.b,g.g].filter(Boolean).join(' · '))+'</div>'+
@@ -87,7 +94,7 @@ function openConvert(){const G=groups();if(!G.length){alert('مفيش نواقص
    '<div class="re-sum" id="reSum'+gi+'"></div><button type="button" class="btn re-mk" data-mk="'+gi+'">🔀 اعمل الباليت</button></div>').join('');
  const w=sheet('🔀 تحويل النواقص لباليتات MIX',body);
  const paint=gi=>{const g=G[gi];const ch=[...w.querySelectorAll('[data-zg="'+gi+'"]:checked')].map(x=>g.sizes[+x.dataset.z]);const n=ch.reduce((a,z)=>a+z.n,0);const el=w.querySelector('#reSum'+gi);const b=w.querySelector('[data-mk="'+gi+'"]');
-  const ok=ch.length>=1&&ch.length<=5;el.innerHTML=ch.length?(ch.length>1?'باليت <b>MIX</b> ('+ch.length+' مقاسات) = <b>'+n+'</b> كرتونة':'باليت عادي مقاس <b dir="ltr">'+esc(ch[0].s)+'</b> = <b>'+n+'</b> كرتونة'):'علّم مقاس واحد على الأقل';if(ch.length>5)el.innerHTML='⚠ الـ MIX لحد 5 مقاسات بس';el.classList.toggle('bad',!ok);b.disabled=!ok;
+  const ok=ch.length>=1&&ch.length<=5;const nt=ch.length?netPal(g,ch):null;el.innerHTML=ch.length?(ch.length>1?'باليت <b>MIX</b> ('+ch.length+' مقاسات) = <b>'+n+'</b> كرتونة':'باليت عادي مقاس <b dir="ltr">'+esc(ch[0].s)+'</b> = <b>'+n+'</b> كرتونة')+(nt?'<div class="re-net">صافي الباليت ≈ <b dir="ltr">'+kg1(nt.pal)+'</b> كجم (كانت '+kg1(nt.left)+' كجم صافي في النواقص — الفرق '+kg1(nt.left-nt.pal)+' كجم = وزن الباليت الخشب)</div>':''):'علّم مقاس واحد على الأقل';if(ch.length>5)el.innerHTML='⚠ الـ MIX لحد 5 مقاسات بس';el.classList.toggle('bad',!ok);b.disabled=!ok;
   w.querySelectorAll('[data-zg="'+gi+'"]:not(:disabled)').forEach(x=>{x.closest('label').classList.toggle('on',x.checked)})};
  G.forEach((g,gi)=>paint(gi));
  w.addEventListener('change',e=>{const t=e.target;if(t.dataset.zg!==undefined)paint(+t.dataset.zg)});
@@ -119,7 +126,7 @@ const css=document.createElement('style');css.textContent=`
 .re-sz{display:flex;align-items:center;gap:10px;min-height:46px;border:1px solid #e2e8f0;border-radius:10px;padding:4px 10px;margin:6px 0;background:#fff}.re-sz.on{border-color:#2e7d32;background:#eef7ee}.re-sz input{width:24px;height:24px;flex:none}
 .re-sz.bad{opacity:.6}.re-sz small{color:#b42318}.re-szs{font-weight:800;min-width:34px}
 .re-row{margin-top:6px}.re-l{display:block;font-size:13px;color:#555}.re-l select{width:100%;min-height:46px;margin-top:3px}
-.re-sum{margin:8px 0;font-size:15px;color:#1d6b35}.re-sum.bad{color:#b42318}.re-mk{width:100%;min-height:48px}.re-mk:disabled{opacity:.45}`;
+.re-sum{margin:8px 0;font-size:15px;color:#1d6b35}.re-net{font-size:12.5px;color:#475569;margin-top:3px;line-height:1.45}.re-sum.bad{color:#b42318}.re-mk{width:100%;min-height:48px}.re-mk:disabled{opacity:.45}`;
 document.head.appendChild(css);
 const _ul=upd;upd=function(){const r=_ul.apply(this,arguments);try{mountButtons();paintRevBanner()}catch(e){}return r};
 mountButtons();paintRevBanner();
