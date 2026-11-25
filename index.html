@@ -180,7 +180,7 @@ table.sum th{background:var(--g);color:#fff}
  <button class="btn3" id="bNew">يوم جديد</button>
 </div>
 <div id="busy">جاري عمل التقرير PDF…</div>
-<script src="html2canvas.min.js"></script><script src="jspdf.umd.min.js"></script><script src="sizes.js?v=2"></script><script src="prod-report.js?v=29"></script><script src="pdf-share.js?v=2"></script>
+<script src="html2canvas.min.js"></script><script src="jspdf.umd.min.js"></script><script src="sizes.js?v=2"></script><script src="prod-report.js?v=30"></script><script src="pdf-share.js?v=2"></script>
 <script>
 if(/iPad|iPhone|iPod/.test(navigator.userAgent)||(navigator.platform==='MacIntel'&&navigator.maxTouchPoints>1)||(/Safari/.test(navigator.userAgent)&&!/Chrome|Chromium|CriOS|Android/.test(navigator.userAgent)))document.documentElement.classList.add('ios');
 
@@ -535,7 +535,7 @@ if('serviceWorker' in navigator&&(location.protocol==='https:'||location.hostnam
  async function openDays(){const L=await allDays();const w=document.createElement('div');w.id='daysSheet';w.className='noprint';w.style.cssText='position:fixed;inset:0;background:#0007;z-index:10000;display:flex;align-items:flex-end;justify-content:center';
   w.innerHTML='<div style="background:#fff;width:100%;max-width:520px;max-height:80vh;overflow:auto;border-radius:16px 16px 0 0;padding:14px 14px max(14px,env(safe-area-inset-bottom))"><div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px"><b style="font-size:17px">📂 الأيام المحفوظة</b><button type="button" data-d="x" style="font-size:15px;padding:6px 12px">إغلاق</button></div><div style="font-size:13px;color:#475569;margin-bottom:8px">كل يوم محفوظ لوحده على الموبايل ده. افتح أي يوم تكمّله أو تبعته — اليوم اللي إنت فيه بيفضل محفوظ برضه.</div>'+
   (L.length?L.map(x=>'<div style="border:1px solid #e2e8f0;border-radius:12px;padding:10px;margin:8px 0;display:flex;justify-content:space-between;align-items:center;gap:8px"><div><b>'+esc(x.h&&x.h.date||'—')+'</b> · '+esc(x.h&&x.h.eng||'')+'<div style="font-size:12px;color:#64748b">'+cnt(x)+' باليت · آخر حفظ '+new Date(x._ts).toLocaleDateString('en-GB')+' '+hm(x._ts)+'</div></div><button type="button" class="btn" data-d="'+esc(x._id)+'" style="padding:8px 14px">افتح</button></div>').join(''):'<div style="padding:16px;text-align:center;color:#64748b">مفيش أيام تانية محفوظة</div>')+'</div>';
-  w.addEventListener('click',async e=>{const t=e.target.closest('[data-d]');if(e.target===w||t&&t.dataset.d==='x'){w.remove();return}if(!t)return;const x=L.find(y=>y._id===t.dataset.d);if(!x)return;await save();S=JSON.parse(JSON.stringify(x));if(!Array.isArray(S.left))S.left=[];await save();w.remove();redraw();scrollTo(0,0);banner('📂 فتحت يوم <b>'+esc(S.h.date||'')+'</b> — اليوم اللي كنت فيه محفوظ في «الأيام المحفوظة».');paintDaysBtn()});
+  w.addEventListener('click',async e=>{const t=e.target.closest('[data-d]');if(e.target===w||t&&t.dataset.d==='x'){w.remove();return}if(!t)return;const x=L.find(y=>y._id===t.dataset.d);if(!x)return;if(window.RE&&!RE.guardOpen(x))return;await save();S=JSON.parse(JSON.stringify(x));if(!Array.isArray(S.left))S.left=[];if(window.RE)RE.afterOpen();await save();w.remove();redraw();scrollTo(0,0);banner('📂 فتحت يوم <b>'+esc(S.h.date||'')+'</b> — اليوم اللي كنت فيه محفوظ في «الأيام المحفوظة».');paintDaysBtn()});
   document.body.appendChild(w)}
  document.getElementById('bDays').onclick=openDays;
  // «يوم جديد»: the current day stays saved (no wipe)
@@ -548,4 +548,5 @@ if('serviceWorker' in navigator&&(location.protocol==='https:'||location.hostnam
   if(hasData(S)){if(!S._id)S._id=nid();await save();banner('📝 <b>مسودة غير مكتملة</b> — بيانات تقرير الإنتاج اتسترجعت تلقائياً (آخر حفظ '+hm(S._ts)+'). كمّل من مكان ما وقفت.')}
   paintDaysBtn()})();
 })();
-</script></body></html>
+</script>
+<script src="report-edit.js?v=1"></script></body></html>
