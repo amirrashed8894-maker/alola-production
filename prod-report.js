@@ -75,12 +75,17 @@ function rawBalance(d,rows,left){const p=prepYield(rows,left);const y=yieldOf(d|
  y.L.forEach(o=>{if(!(o.raw>0))return;const raw=r1(o.raw),net=r1(o.net),waste=r1(o.raw-o.net);if(raw<=net)issues.push({v:o.v,raw,net,waste,msg:rawIssueMsg({v:o.v,raw,net,waste})})});
  return {issues,y}}
 const p1=x=>(Math.round(x*1000)/10).toLocaleString('en-US',{minimumFractionDigits:1,maximumFractionDigits:1})+'%';
+/* net grams of sizes 100–113 (MIX split by cartons); same net rule as netG */
+const isBig=s=>{s=String(s==null?'':s).trim();if(!/^\d+$/.test(s))return false;const n=+s;return n>=100&&n<=113};
+function bigOf(rows,left){let g=0;[...(rows||[]),...(left||[])].forEach(r=>{if(!r)return;const n=Number(r._n)||0;if(!n)return;if(String(r.s||'')==='MIX'){const p=mixParts(r);const pn=p.reduce((a,x)=>a+x.n,0)||1;p.forEach(x=>{if(isBig(x.s))g+=Math.round(grossG(r)*x.n/pn)-Math.round(n*x.n/pn)*emptyG(r.c)})}else if(isBig(r.s))g+=netG(r)});return g}
 function yieldHTML(d,rows,left){const p=prepYield(rows,left);const R=p.rows.filter(r=>r._n>0||r.p||r.v||r.s),Lf=p.left;if(!R.length&&!Lf.length)return '';const {L,T}=yieldOf(d||{},R,Lf);const many=L.length>1;
  const r=(k,v,cls)=>`<tr${cls?` class="${cls}"`:''}><th>${k}</th><td>${v}</td></tr>`;let h='';
  h+=r('الخام الداخل',T.raw?`${nf(T.raw)} <u>كجم</u>`:'<span class="na">مش مكتوب</span>');
  h+=r('صافي الصادر النهائي',`${nf(T.net)} <u>كجم</u>`,'net');
  h+=r('نسبة الصادر',T.exp!=null?p1(T.exp):'—','pc');
  h+=r('الفرزة بالهالك',T.waste!=null?`${nf(T.waste)} <u>كجم</u> · ${p1(T.waste/T.raw)}`:'—','ws');
+ /* Amir 26/11: مقاس 100–113 لوحده — % من الصادر و% من الخام (always) */
+ const B=bigOf(R,Lf);if(B>0||T.net>0)h+=r('مقاس 100–113',`${nf(B/1000)} <u>كجم</u> · ${T.net?p1(B/1000/T.net):'—'} من الصادر · ${T.exp!=null&&T.raw?p1(B/1000/T.raw):'—'} من الخام`,'bg');
  if(many)L.forEach(o=>{h+=`<tr class="vr"><th>${e(o.v)}</th><td>${o.raw?`${p1(o.exp)} صادر · <span class="wsv">${p1(o.waste/o.raw)} فرزة</span>`:'الخام مش مكتوب'}</td></tr>`});
  const fine=`الصافي (خام صادر) = ${nf(T.gross)} قائم الكراتين − كرتون فاضي ${nf(T.empty)} · الباليتات (${T.pal}) مش داخلة في وزن الكرتونة`+(T.unk.length?` · ⚠ وزن كرتون غير معروف: ${e(T.unk.join('، '))}`:'');
  const bal=(rawBalance(d||{},R,Lf).issues||[]);const warn=bal.length?`<div class="ybal">${bal.map(x=>e(x.msg)).join('<br>')}</div>`:'';
@@ -195,7 +200,7 @@ function sizeShareHTML(rows,left){const d=sizeShare(rows,left);if(d.empty)return
  const note=(anyEst?' — * وزن تقريبي: سطر من غير وزن كرتونة اتحسب بوزن نفس الكرتونة في التقرير':'')+(anyCnt?' — صنف من غير أوزان نسبته بالعدد':'');
  return `<div class="szb"><div class="szt">نسبة المقاسات داخل كل صنف <small>النسبة = نصيب المقاس من <b>الوزن الصافي</b> لنفس الصنف، ومجموع المقاسات 100% لكل صنف — العدد زي ما هو والصافي تحته — شامل النواقص في نفس المقاس والعبوة${note}</small></div><table class="sztbl"><colgroup><col class="c1"><col class="c2"><col class="c3"><col class="c4"></colgroup><thead><tr><th>العبوة</th><th>المقاس</th><th>عدد الكراتين<small class="szkh">الوزن الصافي</small><small class="szkh nn2">خام صادر — بعد خصم الكرتون الفاضي</small></th><th>النسبة (بالصافي)</th></tr></thead><tbody>${body}<tr class="szgt"><td colspan="2">الإجمالي العام</td><td class="qn" dir="ltr">${fmt(d.tot)}${kgTxt(d.totT,anyEst,d.totKg>0)}</td><td class="pc" dir="ltr"></td></tr></tbody></table></div>`}
 /* === /size-share === */
-window.PR={CSS,sizeShare,sizeShareHTML,yieldOf,yieldHTML,rawBalance,introHTML,prepYield,netG,emptyG,netTotals,lrT,T10,PALLET_KG,
+window.PR={CSS,bigOf,isBig,sizeShare,sizeShareHTML,yieldOf,yieldHTML,rawBalance,introHTML,prepYield,netG,emptyG,netTotals,lrT,T10,PALLET_KG,
 html(d){return ''},
 async pdf(d){
  const rows=(d.rows||[]).map(r=>({...r,_n:parseInt(r.n,10)||0,_kg:(parseInt(r.n,10)||0)*(parseFloat(r.w)||0)}));
