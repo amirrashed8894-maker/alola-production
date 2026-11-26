@@ -73,7 +73,7 @@ async function openEditList(){const L=(await (window.prodDays?prodDays():Promise
   '<label class="btn2 re-file">📄 افتح تقرير من ملف PDF (من الواتساب أو من موبايل تاني)<input type="file" accept="application/pdf,.pdf" id="rePdf" hidden></label>');
  w.addEventListener('click',async e=>{const t=e.target.closest('[data-reo]');if(!t)return;if(t.dataset.reo==='cur'){if(!confirm(confirmText(S,'')))return;startRevision();await save();closeSheet();redraw();paintRevBanner();return}const x=L[+t.dataset.reo];if(x)await openForEdit(x,'الأيام المحفوظة');paintRevBanner()});
  w.querySelector('#rePdf').addEventListener('change',async e=>{const f=e.target.files&&e.target.files[0];if(f){await openPdfFile(f);paintRevBanner()}})}
-/* ---------- الوزن الصافي: نفس دالة التقرير (PR.netG / PR.netTotals) — خصم 20 كجم للباليت والكراتين الفاضية ---------- */
+/* ---------- الوزن الصافي: نفس دالة التقرير (PR.netG / PR.netTotals) — خصم الكراتين الفاضية بس (من غير باليت) ---------- */
 const nrm=r=>Object.assign({},r,{n:String(parseInt(AD(String(r&&r.n||'')).trim(),10)||0),w:String(wNum(r&&r.w)||0)});
 const kg1=g=>(Math.round(g/100)/10).toLocaleString('en-US',{maximumFractionDigits:1});
 function netOfDay(x){try{if(!window.PR||!PR.netTotals)return null;const P=PR.prepYield((x.rows||[]).filter(filled).map(nrm),(x.left||[]).filter(lfilled).map(nrm));return PR.netTotals(P.rows,P.left).tt/10}catch(e){return null}}

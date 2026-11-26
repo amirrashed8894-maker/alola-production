@@ -180,7 +180,7 @@ table.sum th{background:var(--g);color:#fff}
  <button class="btn3" id="bNew">يوم جديد</button>
 </div>
 <div id="busy">جاري عمل التقرير PDF…</div>
-<script src="html2canvas.min.js"></script><script src="jspdf.umd.min.js"></script><script src="sizes.js?v=2"></script><script src="prod-report.js?v=31"></script><script src="pdf-share.js?v=2"></script>
+<script src="html2canvas.min.js"></script><script src="jspdf.umd.min.js"></script><script src="sizes.js?v=2"></script><script src="prod-report.js?v=32"></script><script src="pdf-share.js?v=2"></script>
 <script>
 if(/iPad|iPhone|iPod/.test(navigator.userAgent)||(navigator.platform==='MacIntel'&&navigator.maxTouchPoints>1)||(/Safari/.test(navigator.userAgent)&&!/Chrome|Chromium|CriOS|Android/.test(navigator.userAgent)))document.documentElement.classList.add('ios');
 
@@ -405,8 +405,8 @@ function upd(){
 }
 const r1=x=>Math.round(x*10)/10;
 /* v30 (Amir «وحد الاوزان طبقا للصافي»): every weight on this screen = net, the same function the report's «الصادر والفرزة» uses (PR.netG):
-   cartons × carton weight − 20 kg per numbered pallet − cartons × empty-carton weight. Excel/CSV/embedded data keep the entered (gross) values. */
-const NETNOTE='<div class="nnt">صافي بعد خصم الباليتات (20 كجم) والكراتين الفاضية</div>';
+   cartons × carton weight − cartons × empty-carton weight (26/11: carton weight excludes pallets → no pallet deduction). Excel/CSV/embedded data keep the entered (gross) values. */
+const NETNOTE='<div class="nnt">صافي (خام صادر) بعد خصم الكراتين الفاضية</div>';
 function netScreen(){const f=t=>(t/10).toLocaleString('en-US');if(!(window.PR&&PR.netTotals))return {tt:0,pt:0,lt:0,f,note:''};const RL=repRL();const P=PR.prepYield(RL.rows,RL.left);const o=PR.netTotals(P.rows.filter(r=>r._n>0||r.p||r.v||r.s),P.left);o.f=f;o.note=NETNOTE;return o}
 function netRowTxt(r,kg,isLeft,n){if(!(window.PR&&PR.netG))return Math.round(kg*10)/10+' كجم';const c=n!=null?n:(parseInt(r.n,10)||0);const g=PR.netG({p:r.p,c:r.c,_n:c,_kg:kg},isLeft);return (Math.round(g/100)/10).toLocaleString('en-US')+' كجم صافي'}
 function leftNet(T){const f=t=>(t/10).toLocaleString('en-US');const by={},keys=Object.keys(T.bys);const gs={};leftUsed().forEach(r=>{const c=/^[1-9]\d*$/.test(lnum(r.n))?parseInt(lnum(r.n),10):0;const w=wNum(r.w)||0;const k=r.s||'—';gs[k]=(gs[k]||0)+(window.PR&&PR.netG?PR.netG({c:r.c,_n:c,_kg:c*w},1):Math.round(c*w*1000))});
@@ -415,7 +415,7 @@ function sumKeys(A){return Object.keys(A.sum).sort((a,b)=>A.sum[a].v.localeCompa
 function sumTable(A,NT){const ks=sumKeys(A);if(!ks.length)return '<div class="hint">لسه مفيش بيانات</div>';NT=NT||netScreen();
  /* v30: الوزن هنا صافي (نفس حساب «الصادر والفرزة»): الإجمالي مقرّب، والسطور متقسّمة منه علشان مجموعها = الإجمالي */
  const g=ks.map(k=>A.sum[k].ng||0),sg=g.reduce((a,b)=>a+b,0),tot=NT.pg===sg?NT.pt:(window.PR&&PR.T10?PR.T10(sg):0),t=window.PR&&PR.lrT?PR.lrT(g,tot):g.map(()=>0);
- return `<table class="sum"><tr><th>الصنف</th><th>المقاس</th><th>نوع الكرتون</th><th>باليتات</th><th>كراتين</th><th>صافي كجم<small class="nnt">بعد خصم الباليت والكرتون الفاضي</small></th></tr>${ks.map((k,ki)=>`<tr><td>${esc(A.sum[k].v)}</td><td>${esc(A.sum[k].s)}${(()=>{const t=szInfo({v:A.sum[k].v,c:A.sum[k].c,pk:''},A.sum[k].s);return t?`<small class="szd">${esc(t)}</small>`:''})()}</td><td>${esc(A.sum[k].c)}</td><td>${A.sum[k].p}</td><td>${A.sum[k].n}</td><td>${NT.f(t[ki])}</td></tr>`).join('')}<tr><th colspan="3">الإجمالي</th><th>${ks.reduce((a,k)=>a+A.sum[k].p,0)}</th><th>${ks.reduce((a,k)=>a+A.sum[k].n,0)}</th><th>${NT.f(tot)}</th></tr></table>`}
+ return `<table class="sum"><tr><th>الصنف</th><th>المقاس</th><th>نوع الكرتون</th><th>باليتات</th><th>كراتين</th><th>صافي كجم<small class="nnt">خام صادر — بعد خصم الكرتون الفاضي</small></th></tr>${ks.map((k,ki)=>`<tr><td>${esc(A.sum[k].v)}</td><td>${esc(A.sum[k].s)}${(()=>{const t=szInfo({v:A.sum[k].v,c:A.sum[k].c,pk:''},A.sum[k].s);return t?`<small class="szd">${esc(t)}</small>`:''})()}</td><td>${esc(A.sum[k].c)}</td><td>${A.sum[k].p}</td><td>${A.sum[k].n}</td><td>${NT.f(t[ki])}</td></tr>`).join('')}<tr><th colspan="3">الإجمالي</th><th>${ks.reduce((a,k)=>a+A.sum[k].p,0)}</th><th>${ks.reduce((a,k)=>a+A.sum[k].n,0)}</th><th>${NT.f(tot)}</th></tr></table>`}
 $('addLeft').onclick=()=>{if(!Array.isArray(S.left))S.left=[];const last=S.left[S.left.length-1];S.left.push(last?{v:last.v,pk:last.pk,c:last.c,s:'',b:last.b,g:last.g,n:'',w:last.w,note:''}:{v:'',pk:'',c:'',s:'',b:'العلا',g:'',n:'',w:'',note:''});save();renderLeft();upd();const el=$('l'+(S.left.length-1));if(el)el.scrollIntoView({behavior:'smooth',block:'center'})};
 $('addRow').onclick=()=>{S.rows.push(er());renderRows();upd();const i=S.rows.length-1;$('r'+i).scrollIntoView({behavior:'smooth'});$('r'+i).querySelector('input').focus()};
 $('bNew').onclick=()=>{if(confirm('هتبدأ يوم جديد وهتمسح بيانات اليوم الحالي. اتأكد إنك بعت الملف الأول. متأكد؟')){S=blank(S.h.eng,S.h.exp);delete S.h.code;save();initHeader();renderRows();renderLeft();upd();scrollTo(0,0)}};
