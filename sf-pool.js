@@ -50,6 +50,8 @@ const css=`#pp .sfc{background:#fff;border-radius:14px;margin:10px 12px 0;paddin
 #pp .sfnum{display:flex;align-items:center;gap:8px;margin-top:4px}#pp .sfnum input{flex:1;min-width:0;text-align:center;font-size:24px;font-weight:800;min-height:54px}#pp .sfnum button{width:56px;min-height:54px;font-size:24px;background:#e8efe8;color:var(--g);padding:0}
 #pp .sfk{display:flex;gap:6px;justify-content:center;margin-top:8px}#pp .sfk button{min-height:44px;padding:4px 14px;background:#e8efe8;color:var(--g);font-weight:700}
 .expl{display:flex;align-items:center;gap:8px;margin:6px 0 2px}.expl .sfpr{margin-inline-start:auto}
+#exp.lk{background:#f3efe8 url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='14' height='14'%3E%3Ctext y='12' font-size='12'%3E%F0%9F%94%92%3C/text%3E%3C/svg%3E") no-repeat 28px center;border-color:#d8c3a5}
+.expfix{display:flex;flex-direction:column;gap:2px;background:#fff8ef;border:1px solid #f0c48a;border-radius:12px;padding:8px 12px;margin:10px 0 4px;color:#5a3300}.expfix b{color:#7a3e00}.expfix small{color:#7a5a3a;font-size:12.5px}
 .expb{display:inline-block;background:#fff1e0;color:#7a3e00;border:1px solid #f0c48a;border-radius:8px;padding:1px 8px;font-size:12.5px;font-weight:700;white-space:nowrap}
 .sfpr{background:#fff;border:1.5px solid #7a3e00;color:#7a3e00;min-height:34px;padding:2px 10px;font-size:13px;font-weight:700}
 #sfprint{position:fixed;inset:0;z-index:320;background:#0007;display:flex;align-items:flex-end}#sfprint .b{background:#fff;width:100%;border-radius:18px 18px 0 0;padding:14px;padding-bottom:max(14px,env(safe-area-inset-bottom))}
@@ -88,7 +90,7 @@ async function drawPrint(){let el=document.getElementById('sfprint');if(!el){el=
  el.innerHTML=`<div class="b"><h3>🖨 استيكرات صن فروت — ${pr.rows.length} باليت</h3><div style="direction:ltr;text-align:right;font-weight:700">${rangesH(nums)}</div>
  ${img?`<img src="${img}" alt="الاستيكر">`:''}<div style="font-size:13px;color:#555">مقاس 100×50 مم، استيكر في كل صفحة — لطابعة الاستيكرات (TSC). عدد النسخ من كل رقم:</div>
  <div class="cp">${[1,2,3,4].map(c=>`<button type="button" class="${pr.copies===c?'on':''}" data-sfp="c${c}">${c}</button>`).join('')}</div>
- <label style="display:flex;gap:8px;align-items:center;font-size:14px;margin:4px 0 10px"><input type="checkbox" data-sfp="fill" ${pr.fill?'checked':''} style="width:auto;min-height:0"> اكتب بيانات الباليت على الاستيكر (الصنف، المقاس، الكراتين، الوزن، التاريخ، الدرجة)</label>
+ <label style="display:flex;gap:8px;align-items:center;font-size:14px;margin:4px 0 10px"><input type="checkbox" data-sfp="fill" ${pr.fill?'checked':''} style="width:auto;min-height:0"> اكتب بيانات الباليت على الاستيكر (الصنف، المقاس، الكراتين، التاريخ، الدرجة) — الوزن بيفضل فاضي يتكتب باليد</label>
  <div class="r2"><button type="button" class="btn2" data-sfp="x">إغلاق</button><button type="button" class="btn" data-sfp="go">PDF للطابعة (${pr.rows.length*pr.copies} استيكر)</button></div></div>`}
 document.addEventListener('click',async e=>{const t=e.target.closest('[data-sfp]');if(!t||!pr)return;const a=t.dataset.sfp;
  if(a==='x'){const el=document.getElementById('sfprint');if(el)el.remove();pr=null;return}

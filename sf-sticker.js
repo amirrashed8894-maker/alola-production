@@ -7,7 +7,7 @@ async function fontsReady(){try{if(document.fonts){await Promise.all(['900 40px 
 const pt=v=>v*25.4/72; /* نقطة → مم */
 function fields(r,fill){const sz=r.s==='MIX'?(typeof sizeLabel==='function'?sizeLabel(r):'MIX'):(r.s||'');const n=parseInt(r.n,10)||0,w=(typeof wNum==='function'?wNum(r.w):parseFloat(r.w))||0;
  const d=String((typeof S!=='undefined'&&S&&S.h&&S.h.date)||'').split('-');const date=d.length===3?d[2]+'/'+d[1]+'/'+d[0]:'';
- return {p:r.p,fill:fill!==false,v:r.v||'',s:sz,n:n?String(n):'',kg:n&&w?(Math.round(n*w*10)/10).toLocaleString('en-US'):'',date,g:r.g||''}}
+ return {p:r.p,fill:fill!==false,v:r.v||'',s:sz,n:n?String(n):'',kg:'' /* Amir: الوزن على الاستيكر دايمًا فاضي (يتكتب باليد) */,date,g:r.g||''}}
 async function canvas(f){await fontsReady();const c=document.createElement('canvas');c.width=W*K;c.height=H*K;const x=c.getContext('2d');
  const X=v=>v*K,Y=v=>(H-v)*K; /* نفس إحداثيات ملف الـ PDF (من تحت لفوق) */
  x.fillStyle='#fff';x.fillRect(0,0,c.width,c.height);x.fillStyle='#000';x.strokeStyle='#000';x.lineWidth=Math.max(2,pt(0.3)*K*1.4);x.textBaseline='alphabetic';

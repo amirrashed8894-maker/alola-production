@@ -42,7 +42,7 @@ function specOk(r){if(!r||!r.v)return false;if(String(r.w??'').trim()&&!wOk(r.w)
 function rowHook(i){const b=document.getElementById('pk'+i);if(!b)return;const r=S.rows[i];const ok=specOk(r);b.disabled=!ok;b.textContent=ok?(r.p?'🔢 باليتات تانية بنفس المواصفة':'🔢 اختار أرقام الباليتات'):'🔢 أرقام الباليتات — كمّل المواصفة الأول'}
 /* ---------- v2 entry: one sheet → «المواصفة» (big chips, last spec prefilled, recent specs) → «الأرقام» (big buttons, range, +N) → «تأكيد» ---------- */
 let cur=null;
-const RK='alola_pallet_specs',SK=['v','pk','c','s','mix','b','g','loc','n','w','exp'];
+const RK='alola_pallet_specs',SK=['v','pk','c','s','mix','b','g','loc','n','w'];
 /* v7: المُصدر في المواصفة — صن فروت بياخد أرقام SF-xxxxx من عداده (sf-pool.js)، العلا/الحسن زي ما هم P0001… */
 const hexp=()=>(S&&S.h&&S.h.exp)||'العلا';
 const isSFx=e=>!!(window.SFP&&SFP.isSF(e));
@@ -104,9 +104,9 @@ function firstFreeBlock(u){let b=0;for(;b<500;b++){let free=false;for(let n=b*BL
 function specText(r){const sz=r.s==='MIX'?sizeLabel(r):r.s;return [(r.exp&&r.exp!==hexp())||isSFx(r.exp)?'المُصدر: '+r.exp:'',r.v,'مقاس '+sz,r.c,r.b,'درجة '+r.g,r.loc,r.n+' كرتونة',(wNum(r.w)>0?wNum(r.w).toFixed(3)+' كجم/كرتونة':'')].filter(x=>x&&!/undefined/.test(x)).map(x=>'<span>'+esc(x)+'</span>').join('')}
 function rangesOf(list){const a=list.slice().sort((x,y)=>numOf(x)-numOf(y));const out=[];let s=null,p=null;a.forEach(x=>{const n=numOf(x);if(s!==null&&n===numOf(p)+1){p=x;return}if(s!==null)out.push(s===p?s:s+' → '+p);s=p=x});if(s!==null)out.push(s===p?s:s+' → '+p);return out.join('، ')}
 function mount(){let el=document.getElementById('pp');if(el)el.remove();el=document.createElement('div');el.id='pp';document.body.appendChild(el);const tt=document.getElementById('ptoast');if(tt)tt.style.display='none';return el}
-function startNums(spec,i){if(!spec.exp)spec.exp=i!=null&&S.rows[i]?rowExp(S.rows[i]):hexp();if(isSFx(spec.exp)){cur={spec,i,step:'sf',sel:[],sfn:1,confirm:false};mount();draw();SFP.flush();return}const u=used();const f=firstFreeBlock(u);cur={spec,i,step:'nums',sel:[],block:f,first:f,anchor:null,range:false,confirm:false};mount();draw();flush()}
+function startNums(spec,i){spec.exp=hexp();if(isSFx(spec.exp)){cur={spec,i,step:'sf',sel:[],sfn:1,confirm:false};mount();draw();SFP.flush();return}const u=used();const f=firstFreeBlock(u);cur={spec,i,step:'nums',sel:[],block:f,first:f,anchor:null,range:false,confirm:false};mount();draw();flush()}
 function openRow(i){const r=S.rows[i];if(!specOk(r)){ptoast('كمّل مواصفة الباليت الأول (الصنف، المقاس، الكرتون، الدرجة، التخزين، عدد الكراتين)');return}startNums(specOf(r),i)}
-function openNew(){const R=recent();const base=R[0]?JSON.parse(JSON.stringify(R[0])):{v:'',pk:'',c:'',s:'',mix:[],b:'',g:'',loc:'',n:'',w:''};if(!base.exp)base.exp=hexp();cur={spec:base,i:null,step:'spec',sel:[],block:0,first:0,anchor:null,range:false,confirm:false};mount();draw()}
+function openNew(){const R=recent();const base=R[0]?JSON.parse(JSON.stringify(R[0])):{v:'',pk:'',c:'',s:'',mix:[],b:'',g:'',loc:'',n:'',w:''};base.exp=hexp();cur={spec:base,i:null,step:'spec',sel:[],block:0,first:0,anchor:null,range:false,confirm:false};mount();draw()}
 function close(){const el=document.getElementById('pp');if(el)el.remove();cur=null}
 function syncText(){if(P.on===true)return '<div class="sync">✓ الأرقام متزامنة مع كل الموبايلات'+(P.at?' — آخر تحديث '+new Date(P.at).toTimeString().slice(0,5):'')+'</div>';if(P.on===false)return '<div class="sync off">⚠ مفيش اتصال بالسيرفر دلوقتي — الأرقام محفوظة على الموبايل ده وهتتزامن أول ما النت يرجع</div>';return '<div class="sync">… بيتأكد من الأرقام المستخدمة</div>'}
 const steps=s=>`<div class="steps"><span class="${s==='spec'?'on':'done'}">١ المواصفة</span><span class="${s==='nums'?'on':s==='spec'?'':'done'}">٢ الأرقام</span><span class="${s==='ok'?'on':''}">٣ تأكيد</span></div>`;
@@ -123,8 +123,8 @@ function drawSpec(el){const W=cur.spec;const R=recent();const g=GOF(W.v);
  const nIsMix=W.s==='MIX';
  el.innerHTML=`<div class="h"><button type="button" data-pp="x">✕ إلغاء</button><b>باليتات جديدة</b></div>${steps('spec')}
  <div class="body">
- ${R.length?`<div class="grp"><div class="gt"><span>⚡ مواصفة استخدمتها قبل كده — دوسة واحدة وتروح للأرقام</span></div><div class="rec">${R.map((o,j)=>`<button type="button" class="rc" data-rec="${j}"><b>${isSFx(o.exp)?'<span class="expb">صن فروت · SF</span> ':''}${esc(o.v)} · مقاس ${esc(o.s==='MIX'?sizeLabel(o):o.s)}</b><small>${esc([o.c,o.b,'درجة '+o.g,o.loc,o.n+' كرتونة/باليت'].join(' · '))}</small></button>`).join('')}</div></div><div class="gt" style="margin:12px 2px 0"><span>أو اختار / غيّر المواصفة:</span><button type="button" class="ch add" style="min-height:34px;padding:2px 10px;font-size:13px" data-pp="clear">مسح المواصفة</button></div>`:''}
- ${grp('المُصدر — أرقام الباليتات بتاعته','exp',EXL().filter(x=>!isMaggiName(x)),W.exp||hexp())}${isSFx(W.exp)?'<div class="hint" style="margin:4px 2px 0;color:#7a3e00">صن فروت: الأرقام SF-00001… من عداد صن فروت بالترتيب (مستقلة عن أرقام العلا)</div>':''}
+ ${R.length?`<div class="grp"><div class="gt"><span>⚡ مواصفة استخدمتها قبل كده — دوسة واحدة وتروح للأرقام</span></div><div class="rec">${R.map((o,j)=>`<button type="button" class="rc" data-rec="${j}"><b>${esc(o.v)} · مقاس ${esc(o.s==='MIX'?sizeLabel(o):o.s)}</b><small>${esc([o.c,o.b,'درجة '+o.g,o.loc,o.n+' كرتونة/باليت'].join(' · '))}</small></button>`).join('')}</div></div><div class="gt" style="margin:12px 2px 0"><span>أو اختار / غيّر المواصفة:</span><button type="button" class="ch add" style="min-height:34px;padding:2px 10px;font-size:13px" data-pp="clear">مسح المواصفة</button></div>`:''}
+ <div class="expfix"><span>المُصدر: <b>${esc(hexp())}</b></span><small>${isSFx(hexp())?'أرقام صن فروت SF-00001… بالترتيب من عداد صن فروت':'أرقام '+esc(hexp())+' العادية'} — المُصدر بيتحدد مرة واحدة من رأس التقرير</small></div>
  ${grp('الصنف','v',L.variety,W.v)}
  ${grp('نوع التعبئة','pk',packs,W.pk)}
  ${W.v?grp('نوع الكرتون','c',cts,W.c,'<button type="button" class="ch add" data-sadd="c">+ نوع</button>'):''}
@@ -186,7 +186,7 @@ document.addEventListener('click',e=>{const t=e.target.closest('[data-pp],[data-
  const a=t.dataset.pp;
  if(a==='x'){close();return}
  if(a==='clear'){cur.spec={v:'',pk:'',c:'',s:'',mix:[],b:'',g:'',loc:'',n:'',w:''};draw();return}
- if(a==='tonums'){if(!specOk(cur.spec)){cur.tried=true;cur.keep=true;draw();const nx=nextNeed();if(nx)nx.scrollIntoView({block:'center'});return}if(window.askRawIfMissing&&!askRawIfMissing(cur.spec.v))return;if(isSFx(cur.spec.exp)){cur.step='sf';cur.sfn=cur.sfn||1;cur.confirm=false;draw();SFP.flush();return}const u=used();cur.first=cur.block=firstFreeBlock(u);cur.step='nums';draw();flush();return}
+ if(a==='tonums'){if(!specOk(cur.spec)){cur.tried=true;cur.keep=true;draw();const nx=nextNeed();if(nx)nx.scrollIntoView({block:'center'});return}if(window.askRawIfMissing&&!askRawIfMissing(cur.spec.v))return;cur.spec.exp=hexp();if(isSFx(cur.spec.exp)){cur.step='sf';cur.sfn=cur.sfn||1;cur.confirm=false;draw();SFP.flush();return}const u=used();cur.first=cur.block=firstFreeBlock(u);cur.step='nums';draw();flush();return}
  if(a==='tospec'){cur.step='spec';cur.confirm=false;draw();return}
  if(a==='prev'){cur.block=Math.max(cur.first,cur.block-1);draw();return}
  if(a==='next'){cur.block++;draw();return}
@@ -196,7 +196,7 @@ document.addEventListener('click',e=>{const t=e.target.closest('[data-pp],[data-
  if(a==='noconf'){cur.confirm=false;cur.keep=true;draw();return}
  if(a==='mark'){const x=(prompt('اكتب الأرقام اللي اتسجلت قبل كده (مثال: P0001-P0150 أو P0007,P0009):')||'').toUpperCase().replace(/\s/g,'');if(!x)return;const set=dec(x.split(/[,،]/));if(!set.size||set.size>2000)return alert('الصيغة مش مفهومة');call('/api/pallets/claim',{nums:[...set],manual:true}).then(d=>{take(d);persist();draw();ptoast('اتعلّم '+set.size+' رقم مستخدم')}).catch(()=>alert('محتاج إنترنت علشان تعلّم الأرقام'));return}
  if(a==='go'){create();return}});
-function create(){const sfm=cur.step==='sf';const nums=sfm?cur.sel.slice():cur.sel.slice().sort((x,y)=>numOf(x)-numOf(y));const ex=cur.spec.exp||hexp();const keepExp=(sfm||isSFx(ex)||ex!==hexp())?ex:'';if(!nums.length)return;const before=JSON.stringify(S.rows);const made=[];let first,at;
+function create(){const sfm=cur.step==='sf';const nums=sfm?cur.sel.slice():cur.sel.slice().sort((x,y)=>numOf(x)-numOf(y));const ex=hexp();cur.spec.exp=ex;const keepExp='';if(!nums.length)return;const before=JSON.stringify(S.rows);const made=[];let first,at;
  const mk=p=>{const o=Object.assign(er(),JSON.parse(JSON.stringify(cur.spec)));if(o.s!=='MIX')delete o.mix;else o.mix=(o.mix||[]).filter(x=>x&&x.s&&x.n);o.w=wStr(o.w);o.p=p;if(keepExp)o.exp=keepExp;else delete o.exp;return o};
  if(cur.i!=null){const r=S.rows[cur.i];if(keepExp)r.exp=keepExp;else delete r.exp;first=at=cur.i;let rest=nums;if(!r.p){r.p=nums[0];made.push(r.p);rest=nums.slice(1)}const tpl=JSON.parse(JSON.stringify(r));rest.forEach(p=>{const c=JSON.parse(JSON.stringify(tpl));c.p=p;S.rows.splice(++at,0,c);made.push(p)})}
  else{let lastF=-1;S.rows.forEach((r,j)=>{if(filled(r))lastF=j});first=lastF+1;at=lastF;nums.forEach(p=>{S.rows.splice(++at,0,mk(p));made.push(p)})}

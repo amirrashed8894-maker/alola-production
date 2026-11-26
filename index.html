@@ -241,7 +241,10 @@ function sizeLabel(r){if(!r||r.s!=='MIX')return r&&r.s||'';const lines=mixLines(
 function sizeSortKey(s){if(String(s).startsWith('MIX'))return 10000;const n=parseFloat(s);return isNaN(n)?9999:n}
 const numOrText=v=>v===''||v==null?'':(isNaN(Number(v))?v:Number(v));
 function sizeExport(r){return r&&r.s==='MIX'?sizeLabel(r):numOrText(r&&r.s)}
-function initExp(){const el=$('exp');if(!S.h.exp)S.h.exp='العلا';const list=EXL().filter(x=>!isMaggiName(x));const kept=isMaggiName(S.h.exp);el.innerHTML=list.map(x=>`<option${!kept&&x===S.h.exp?' selected':''}>${esc(x)}</option>`).join('')+(kept?'<option value="__kept" selected>مصدر محفوظ</option>':(list.includes(S.h.exp)?'':`<option selected>${esc(S.h.exp)}</option>`))+'<option value="__new">+ مُصدر جديد…</option>';el.onchange=()=>{if(el.value==='__kept')return;if(el.value==='__new'){const x=(prompt('اسم المُصدر الجديد:')||'').trim();if(x&&!isMaggiName(x)){if(!EXL().includes(x)){XL.exporter.push(x);saveXL()}S.h.exp=x}else if(x&&isMaggiName(x)){alert('الاسم ده غير متاح')}initExp();save();upd();return}S.h.exp=el.value;save();upd()}}
+/* T-13 (t186u): المُصدر بيتحدد مرة واحدة في أول التقرير — بعد ما يتعمل باليت برقم، تغيير المُصدر ممنوع (التنازل بيتعمل في برنامج المحطة بسجل) */
+function expLocked(){return S.rows.some(r=>r&&String(r.p||'').trim())}
+function expLockMsg(){const k=S.rows.filter(r=>r&&String(r.p||'').trim()).length;return 'المُصدر بيتحدد مرة واحدة في أول التقرير.\nفيه '+k+' باليت متسجلة برقم على «'+expDisplay(S.h.exp)+'»، فمينفعش تغيّر المُصدر دلوقتي.\n\nلو باليتات اتنقلت لمُصدر تاني: اعمل «تنازل» في برنامج المحطة (بيتسجل وبيتلغي).\nلو ده يوم مُصدر تاني: ابدأ يوم/تقرير جديد واختار المُصدر في أوله.'}
+function initExp(){const el=$('exp');if(!S.h.exp)S.h.exp='العلا';const list=EXL().filter(x=>!isMaggiName(x));const kept=isMaggiName(S.h.exp);el.title=expLocked()?'المُصدر مقفول — اتعملت باليتات بأرقام':'';el.classList.toggle('lk',expLocked());el.innerHTML=list.map(x=>`<option${!kept&&x===S.h.exp?' selected':''}>${esc(x)}</option>`).join('')+(kept?'<option value="__kept" selected>مصدر محفوظ</option>':(list.includes(S.h.exp)?'':`<option selected>${esc(S.h.exp)}</option>`))+'<option value="__new">+ مُصدر جديد…</option>';el.onchange=()=>{if(el.value==='__kept')return;if(expLocked()&&el.value!==S.h.exp){alert(expLockMsg());initExp();return}if(el.value==='__new'){const x=(prompt('اسم المُصدر الجديد:')||'').trim();if(x&&!isMaggiName(x)){if(!EXL().includes(x)){XL.exporter.push(x);saveXL()}S.h.exp=x}else if(x&&isMaggiName(x)){alert('الاسم ده غير متاح')}initExp();save();upd();return}S.h.exp=el.value;save();upd()}}
 function initSup(){const el=$('sup');if(!el)return;$('supList').innerHTML=(XL.supplier||[]).map(x=>`<option value="${esc(x)}">`).join('');el.value=S.h.sup||'';el.oninput=()=>{S.h.sup=el.value;upd()};el.onchange=()=>{const v=String(el.value||'').trim();S.h.sup=v;if(v&&!(XL.supplier||[]).includes(v)){XL.supplier=[v].concat(XL.supplier||[]).slice(0,30);saveXL();initSup()}upd()}}
 /* الخام الداخل (كجم) — صفوف اختيار صنف + كمية، مخزّنة في S.h.raw[v] كرقم */
 let rawRows=null;
@@ -336,7 +339,7 @@ function analyse(){
  const cnt={};S.rows.forEach(r=>{if(r.p)cnt[r.p]=(cnt[r.p]||0)+1});
  let run=0,pal=0,dups=0,bad=0,miss=0,kg=0,nbad=0;const sum={};const res=[];
  S.rows.forEach(r=>{const o={};
-  if(r.p){pal++;if(!VALID.test(r.p)){o.bad=1;bad++}else if(cnt[r.p]>1){o.dup=1;dups++}else if(window.POOL&&POOL.takenByOther(r.p)){o.dup=1;o.taken=1;dups++}else if(window.SFP&&SFRE.test(r.p)&&SFP.takenByOther(r.p)){o.dup=1;o.taken=1;dups++}else if(window.SFP&&SFP.isVoided(r.p)){o.bad=1;o.vd=1;bad++}else if(SFRE.test(r.p)&&r.exp&&!(window.SFP?SFP.isSF(r.exp):r.exp==='صن فروت')){o.bad=1;o.xe=1;bad++}}
+  if(r.p){pal++;if(!VALID.test(r.p)){o.bad=1;bad++}else if(cnt[r.p]>1){o.dup=1;dups++}else if(window.POOL&&POOL.takenByOther(r.p)){o.dup=1;o.taken=1;dups++}else if(window.SFP&&SFRE.test(r.p)&&SFP.takenByOther(r.p)){o.dup=1;o.taken=1;dups++}else if(window.SFP&&SFP.isVoided(r.p)){o.bad=1;o.vd=1;bad++}else if(SFRE.test(r.p)&&!(window.SFP?SFP.isSF(r.exp||S.h.exp):(r.exp||S.h.exp)==='صن فروت')){o.bad=1;o.xe=1;bad++}}
   if(r.s==='MIX'){const e=mixErr(r);if(e)o.mixBad=e}
   {const nv=String(r.n??'').trim(),wv=String(r.w??'').trim();if(nv&&!/^[1-9]\d*$/.test(nv))o.nBad=1;if(wv&&!wOk(wv))o.wBad=1;if(o.nBad||o.wBad)nbad++}
   if(filled(r)){o.miss=REQ.filter(k=>!r[k]);if(o.mixBad&&!o.miss.includes('s'))o.miss.push('s');if(o.miss.length)miss++}
@@ -375,7 +378,7 @@ document.addEventListener('change',e=>{const t=e.target;if(t.dataset.li===undefi
  if(k==='v'||k==='pk'||k==='c'){if(k==='c'&&(!String(r.w||'').trim()||String(r.w)===String(oldW))){const w=wOf(r.c);const pk=rowPack(r);r.w=w||(pk&&pk.kg?String(pk.kg):r.w||'')}
   if(r.s&&!lsizes(r).includes(r.s))r.s='';if(r.c&&!CTg(r).includes(r.c)&&k!=='c')r.c='';save();renderLeft();upd();return}save();upd()});
 document.addEventListener('click',e=>{const t=e.target;if(t.dataset&&t.dataset.lrm!==undefined){const i=+t.dataset.lrm;const r=S.left[i];if(r&&lfilled(r)&&!confirm('حذف سطر النواقص رقم '+(i+1)+'؟'))return;S.left.splice(i,1);save();renderLeft();upd()}});
-function upd(){
+function upd(){{const ee=$('exp');if(ee){const lk=expLocked();ee.classList.toggle('lk',lk);ee.title=lk?'المُصدر مقفول — اتعملت باليتات بأرقام':''}}
  save();try{renderRaw()}catch(e){}const A=analyse();
  A.res.forEach((o,i)=>{const row=$('r'+i);if(!row)return;
   row.querySelectorAll('[data-k]').forEach(el=>{const k=el.dataset.k;el.classList.toggle('err',(k==='p'&&!!(o.bad||o.dup))||(k==='n'&&!!o.nBad)||(k==='w'&&!!o.wBad));el.classList.toggle('miss',!!(o.miss&&o.miss.includes(k))&&!(k==='p'&&(o.bad||o.dup)))});
@@ -384,7 +387,7 @@ function upd(){
   row.classList.toggle('dup',!!o.dup);
   const zi=$('szi'+i);if(zi){const h=szInfoHTML(S.rows[i]);if(zi.innerHTML!==h)zi.innerHTML=h}
   const otherMiss=(o.miss||[]).filter(k=>!(k==='s'&&S.rows[i].s==='MIX'));
-  $('m'+i).textContent=o.vd?'رقم صن فروت ده اتلغى قبل كده — مينفعش يتستخدم تاني':o.xe?'رقم SF-xxxxx للمُصدر صن فروت بس':o.bad?'رقم غير صحيح — لازم يبدأ بـ P وفيه أرقام (لحد 12 حرف)، أو SF-00001 لصن فروت':o.taken?'الرقم ده اتاخد من موبايل تاني — غيّره':o.dup?'رقم مكرر!':o.nBad?'عدد الكراتين لازم رقم صحيح أكبر من صفر':o.wBad?wMsg(S.rows[i].w):(otherMiss.length?'بيانات ناقصة':(o.mixBad||''));
+  $('m'+i).textContent=o.vd?'رقم صن فروت ده اتلغى قبل كده — مينفعش يتستخدم تاني':o.xe?'رقم SF-xxxxx لتقارير صن فروت بس — مُصدر التقرير ده «'+expDisplay(S.h.exp)+'»':o.bad?'رقم غير صحيح — لازم يبدأ بـ P وفيه أرقام (لحد 12 حرف)، أو SF-00001 لصن فروت':o.taken?'الرقم ده اتاخد من موبايل تاني — غيّره':o.dup?'رقم مكرر!':o.nBad?'عدد الكراتين لازم رقم صحيح أكبر من صفر':o.wBad?wMsg(S.rows[i].w):(otherMiss.length?'بيانات ناقصة':(o.mixBad||''));
   $('run'+i).textContent=o.kg?(netRowTxt(S.rows[i],o.kg,0)):'';if(window.POOL)POOL.rowHook(i)});if(window.POOL)POOL.changed();
  const LT=leftTot(),LA=leftAnalyse();
  const NT=netScreen();
@@ -502,7 +505,7 @@ if(location.hash==='#demo'){S=blank();S.h.eng='م. أحمد';
 initHeader();renderRows();renderLeft();upd();
 if('serviceWorker' in navigator&&(location.protocol==='https:'||location.hostname==='localhost'))navigator.serviceWorker.register('sw.js').catch(()=>{});
 </script>
-<script src="pallet-pool.js?v=7"></script><script src="qrcode.js?v=1"></script><script src="sf-sticker.js?v=1"></script><script src="sf-pool.js?v=1"></script>
+<script src="pallet-pool.js?v=8"></script><script src="qrcode.js?v=1"></script><script src="sf-sticker.js?v=2"></script><script src="sf-pool.js?v=2"></script>
 <script>
 // ===== v34 autosave: every change saved at once on the phone (localStorage + IndexedDB, per day), restored after kill/reload/background/offline; days kept apart =====
 (function(){
