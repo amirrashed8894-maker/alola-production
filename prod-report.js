@@ -44,7 +44,8 @@ function flagsHTML(fl){const prob=fl.filter(f=>f.t!=='n').length;
 const EMPTY_KG={'أوبن توب 7 ك':0.35,'مقفول صغير 7 ك':0.45,'مقفول 14 ك':0.8,'مقفول 15 ك':0.85},PALLET_KG=20;
 const nrm=s=>String(s||'').replace(/[أإآ]/g,'ا').replace(/ة/g,'ه').replace(/ى/g,'ي').replace(/\s+/g,'');
 function emptyKg(c){c=String(c||'').trim();if(EMPTY_KG[c]!=null)return EMPTY_KG[c];const n=nrm(c);for(const k in EMPTY_KG)if(nrm(k)===n)return EMPTY_KG[k];
- if(/15/.test(c))return 0.85;if(/14/.test(c))return 0.8;if(/صندوق|بلاست/.test(c))return 0.35;if(/اوبن|أوبن|open/i.test(c))return 0.35;if(/مقفول/.test(c))return 0.45;return null}
+ /* t201 (أمير t413u + «وحدهم كلهم الي 15 ك»): صندوق الجامبو بكل أسمائه فاضي 0.65 — زي المحطة وبيان التكلفة والباكينج ليست (قبل كده «جامبو بلاستيك» كان 0.35 و«… 15 ك» كان هيبقى 0.85) */
+ if(/جامبو|jumbo/i.test(c))return 0.65;if(/15/.test(c))return 0.85;if(/14/.test(c))return 0.8;if(/صندوق|بلاست/.test(c))return 0.35;if(/اوبن|أوبن|open/i.test(c))return 0.35;if(/مقفول/.test(c))return 0.45;return null}
 /* v30 (2026-11-25, Amir «وحد الاوزان طبقا للصافي»): ONE net basis for every weight in the report = the «الصادر والفرزة» block.
    net of a line (grams, integers) = cartons × carton weight − (20 kg if it is a numbered pallet) − cartons × empty-carton weight (by carton type; unknown type → 0, flagged in the block).
    Leftovers (النواقص) have no pallet → only the empty cartons are deducted. A MIX pallet's 20 kg is split over its sizes by cartons.

@@ -180,11 +180,11 @@ table.sum th{background:var(--g);color:#fff}
  <button class="btn3" id="bNew">يوم جديد</button>
 </div>
 <div id="busy">جاري عمل التقرير PDF…</div>
-<script src="html2canvas.min.js"></script><script src="jspdf.umd.min.js"></script><script src="sizes.js?v=2"></script><script src="prod-report.js?v=34"></script><script src="pdf-share.js?v=2"></script>
+<script src="html2canvas.min.js"></script><script src="jspdf.umd.min.js"></script><script src="sizes.js?v=3"></script><script src="prod-report.js?v=35"></script><script src="pdf-share.js?v=2"></script>
 <script>
 if(/iPad|iPhone|iPod/.test(navigator.userAgent)||(navigator.platform==='MacIntel'&&navigator.maxTouchPoints>1)||(/Safari/.test(navigator.userAgent)&&!/Chrome|Chromium|CriOS|Android/.test(navigator.userAgent)))document.documentElement.classList.add('ios');
 
-const L={"variety": ["أبو سرة", "صيفي", "بلدي", "ليمون", "كلمنتينا", "فريمونت", "موركيت كيني", "موركيت إسباني"], "size": ["20", "24", "28", "32", "36", "40", "42", "48", "56", "64", "72", "80", "88", "100", "113", "125", "138", "150", "162", "216"], "carton": ["أوبن توب 7 ك", "مقفول صغير 7 ك", "مقفول 14 ك", "مقفول 15 ك", "جامبو بلاستيك", "صندوق 2 ك", "صندوق 5 ك", "صندوق 7 ك", "صندوق 10 ك"], "exporter": ["العلا", "الحسن", "صن فروت"], "grade": ["أولى", "وسط", "ثانية"], "loc": ["الصالة", "الثلاجة"], "pack": ["كرتون", "صندوق بلاستيك"], "brand": ["العلا", "الحسن", "كوكلو"]};
+const L={"variety": ["أبو سرة", "صيفي", "بلدي", "ليمون", "كلمنتينا", "فريمونت", "موركيت كيني", "موركيت إسباني"], "size": ["20", "24", "28", "32", "36", "40", "42", "48", "56", "64", "72", "80", "88", "100", "113", "125", "138", "150", "162", "216"], "carton": ["أوبن توب 7 ك", "مقفول صغير 7 ك", "مقفول 14 ك", "مقفول 15 ك", "جامبو بلاستيك 15 ك", "صندوق 2 ك", "صندوق 5 ك", "صندوق 7 ك", "صندوق 10 ك"], "exporter": ["العلا", "الحسن", "صن فروت"], "grade": ["أولى", "وسط", "ثانية"], "loc": ["الصالة", "الثلاجة"], "pack": ["كرتون", "صندوق بلاستيك"], "brand": ["العلا", "الحسن", "كوكلو"]};
 const MAXDEF=10,KEY='alola_production_v1',F=['p','v','s','pk','c','b','g','loc','n','w','note'],REQ=['p','v','s','pk','c','b','g','loc','n'];
 const NAMES={p:'رقم الباليت',v:'الصنف',s:'المقاس',pk:'نوع التعبئة',c:'نوع الكرتون',b:'اسم الكرتون',g:'الدرجة',loc:'مكان التخزين',n:'عدد الكراتين',w:'وزن الكرتونة (كجم)',note:'ملاحظات'};
 const er=()=>Object.fromEntries(F.map(k=>[k,'']));
@@ -231,6 +231,8 @@ function rowSizes(r){const g=GOF(r.v);if(!r.v)return [];if(!g||!window.ALS)retur
 function CTg(r){const g=GOF(r.v);if(!g||!window.ALS)return CT();const L2=ALS.packsFor(g).filter(p=>!r.pk||p.pk===r.pk).map(p=>p.carton);return [...new Set((L2.length?L2:ALS.packsFor(g).map(p=>p.carton)).concat(XL.carton))]}
 function szInfo(r,s,cnt){const g=GOF(r.v);if(!g||!window.ALS||!s||s==='MIX')return '';const pk=rowPack(r);const w=wNum(r.w)||0;const o=ALS.info(g,pk,s,pk&&pk.kg?(w||pk.kg):w);return ALS.text(o)}
 function szInfoHTML(r){if(r.s==='MIX'){return mixLines(r).map(x=>{const t=szInfo(r,x.s);return t?x.s+': '+t:''}).filter(Boolean).join('<br>')}const t=szInfo(r,r.s);if(t)return t;const g=GOF(r.v);if(r.v&&g==='mand'&&!rowPack(r))return 'اختار وزن الصندوق (2 / 5 / 7 / 10 ك) علشان يتحسب القطر ووزن الحبة';return ''}
+/* t201 (أمير): الجامبو اسمه «جامبو بلاستيك 15 ك»؛ الاسم القديم «جامبو بلاستيك» في تقارير قديمة بيفضل زي ما هو ومش بيتمسح */
+const jumboSame=r=>{const g=GOF(r.v);const p=g&&window.ALS?ALS.packOf(g,r.c,''):null;return !!(p&&p.id==='jumbo'&&/جامبو/.test(String(r.c||'')))};
 const CT=()=>[...new Set(L.carton.concat(XL.carton))],EXL=()=>[...new Set(L.exporter.concat(XL.exporter))],BR=()=>[...new Set(L.brand.concat(XL.brand))];
 const MIXMAX=5;/* v40: لحد 5 مقاسات في الباليت المكس */
 function mixLines(r){return (Array.isArray(r.mix)?r.mix:[]).map(x=>{const s=String(x&&x.s||'').trim();const n=AD(String(x&&x.n||'')).trim();if(!SZ().includes(s)||!/^[1-9]\d*$/.test(n))return null;return {s,n:parseInt(n,10)}}).filter(Boolean)}
@@ -376,7 +378,7 @@ function updLeft(){(S.left||[]).forEach((r,i)=>{const el=$('l'+i);if(!el)return;
 document.addEventListener('input',e=>{const t=e.target;if(t.dataset.li===undefined||t.tagName==='SELECT')return;const r=S.left[+t.dataset.li];if(!r)return;r[t.dataset.lk]=t.value;upd()});
 document.addEventListener('change',e=>{const t=e.target;if(t.dataset.li===undefined||t.tagName!=='SELECT')return;const i=+t.dataset.li,k=t.dataset.lk,r=S.left[i];if(!r)return;if((k==='v'||k==='c'||k==='pk')&&!guardChange(r,k,t.value)){t.value=r[k]||'';return}const oldW=wOf(r.c);r[k]=t.value;if(k==='v'&&r.v)askRawIfMissing(r.v);
  if(k==='v'||k==='pk'||k==='c'){if(k==='c'&&(!String(r.w||'').trim()||String(r.w)===String(oldW))){const w=wOf(r.c);const pk=rowPack(r);r.w=w||(pk&&pk.kg?String(pk.kg):r.w||'')}
-  if(r.s&&!lsizes(r).includes(r.s))r.s='';if(r.c&&!CTg(r).includes(r.c)&&k!=='c')r.c='';save();renderLeft();upd();return}save();upd()});
+  if(r.s&&!lsizes(r).includes(r.s))r.s='';if(r.c&&!CTg(r).includes(r.c)&&!jumboSame(r)&&k!=='c')r.c='';save();renderLeft();upd();return}save();upd()});
 document.addEventListener('click',e=>{const t=e.target;if(t.dataset&&t.dataset.lrm!==undefined){const i=+t.dataset.lrm;const r=S.left[i];if(r&&lfilled(r)&&!confirm('حذف سطر النواقص رقم '+(i+1)+'؟'))return;S.left.splice(i,1);save();renderLeft();upd()}});
 function upd(){{const ee=$('exp');if(ee){const lk=expLocked();ee.classList.toggle('lk',lk);ee.title=lk?'المُصدر مقفول — اتعملت باليتات بأرقام':''}}
  save();try{renderRaw()}catch(e){}const A=analyse();
